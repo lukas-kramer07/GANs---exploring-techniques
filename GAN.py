@@ -9,7 +9,7 @@ from keras import layers
 import time
 from IPython import display
 
-gan_dir = "nums112"
+gan_dir = "nums112_normal_size"
 
 
 def make_generator_model():
@@ -62,7 +62,7 @@ def make_discriminator_model():
     model = tf.keras.Sequential()
     model.add(
         layers.Conv2D(
-            64, (5, 5), strides=(2, 2), padding="same", input_shape=[28, 28, 1]
+            64, (5, 5), strides=(2, 2), padding="same", input_shape=[112, 112, 1]
         )
     )
     model.add(layers.LeakyReLU())
@@ -108,7 +108,7 @@ def train_step(
     noise = tf.random.normal([BATCH_SIZE, noise_dim])
 
     with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
-        generated_images = tf.image.resize(generator(noise, training=True), (28, 28))
+        generated_images = generator(noise, training=True)
 
         real_output = discriminator(images, training=True)
         fake_output = discriminator(generated_images, training=True)
@@ -178,16 +178,9 @@ def generate_and_save_images(model, epoch, test_input):
 
     fig = plt.figure(figsize=(4, 4))
 
-    for i in range(predictions.shape[0] // 2):
+    for i in range(predictions.shape[0]):
         plt.subplot(4, 4, i + 1)
         plt.imshow(predictions[i, :, :, 0] * 127.5 + 127.5, cmap="gray")
-        plt.axis("off")
-    for i in range(predictions.shape[0] // 2, predictions.shape[0]):
-        plt.subplot(4, 4, i + 1)
-        plt.imshow(
-            tf.image.resize(predictions, (28, 28))[i, :, :, 0] * 127.5 + 127.5,
-            cmap="gray",
-        )
         plt.axis("off")
     os.makedirs(
         f"Gan_Tut/plots/{gan_dir}", exist_ok=True
@@ -195,15 +188,14 @@ def generate_and_save_images(model, epoch, test_input):
     plt.savefig(f"Gan_Tut/plots/{gan_dir}/image_at_epoch_{epoch}.png")
     plt.close()
 
-
 def main():
     (train_images, train_labels), (_, _) = tf.keras.datasets.mnist.load_data()
     train_images = train_images.reshape(train_images.shape[0], 28, 28, 1).astype(
         "float32"
     )
-    train_images = (train_images - 127.5) / 127.5  # Normalize the images to [-1, 1]
+    train_images = tf.image.resize((train_images - 127.5) / 127.5, (112,112))  # Normalize the images to [-1, 1]
     BUFFER_SIZE = 60000
-    BATCH_SIZE = 256
+    BATCH_SIZE = 512
     # Batch and shuffle the data
     train_dataset = (
         tf.data.Dataset.from_tensor_slices(train_images)
@@ -245,4 +237,17 @@ def main():
 
 
 if __name__ == "__main__":
+    gpus = tf.config.list_physical_devices("GPU")
+    print(gpus)
+    if gpus:
+        # Restrict TensorFlow to only allocate 1GB of memory on the first GPU
+        try:
+            tf.config.set_logical_device_configuration(
+                gpus[0], [tf.config.LogicalDeviceConfiguration(memory_limit=10240)]
+            )
+            logical_gpus = tf.config.list_logical_devices("GPU")
+            print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
+        except RuntimeError as e:
+            # Virtual devices must be set before GPUs have been initialized
+            print(e)
     main()
