@@ -62,15 +62,19 @@ def make_discriminator_model():
     model = tf.keras.Sequential()
     model.add(
         layers.Conv2D(
-            64, (5, 5), strides=(2, 2), padding="same", input_shape=[112, 112, 1]
+            64, (5, 5), strides=(2, 2), padding="valid", input_shape=[112, 112, 1]
         )
     )
     model.add(layers.LeakyReLU())
     model.add(layers.Dropout(0.3))
 
-    model.add(layers.Conv2D(128, (5, 5), strides=(2, 2), padding="same"))
+    model.add(layers.Conv2D(128, (5, 5), strides=(2, 2), padding="valid"))
     model.add(layers.LeakyReLU())
     model.add(layers.Dropout(0.3))
+
+    model.add(layers.Conv2D(128, (5, 5), strides=(2, 2), padding="valid"))
+    model.add(layers.LeakyReLU())
+    model.add(layers.Dropout(0.1))
 
     model.add(layers.Flatten())
     model.add(layers.Dense(1))
@@ -188,12 +192,15 @@ def generate_and_save_images(model, epoch, test_input):
     plt.savefig(f"Gan_Tut/plots/{gan_dir}/image_at_epoch_{epoch}.png")
     plt.close()
 
+
 def main():
     (train_images, train_labels), (_, _) = tf.keras.datasets.mnist.load_data()
     train_images = train_images.reshape(train_images.shape[0], 28, 28, 1).astype(
         "float32"
     )
-    train_images = tf.image.resize((train_images - 127.5) / 127.5, (112,112))  # Normalize the images to [-1, 1]
+    train_images = tf.image.resize(
+        (train_images - 127.5) / 127.5, (112, 112)
+    )  # Normalize the images to [-1, 1]
     BUFFER_SIZE = 60000
     BATCH_SIZE = 512
     # Batch and shuffle the data
@@ -204,6 +211,9 @@ def main():
     )
     generator = make_generator_model()
     discriminator = make_discriminator_model()
+    print( discriminator(
+        generator(tf.random.normal([1, 100]))
+    ))
     generator_optimizer = tf.keras.optimizers.Adam(1e-4)
     discriminator_optimizer = tf.keras.optimizers.Adam(1e-4)
     checkpoint_dir = "./training_checkpoints"
