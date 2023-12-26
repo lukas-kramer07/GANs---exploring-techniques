@@ -177,7 +177,7 @@ def main():
         class_names=class_names,
     )
     # visualize new data
-    visualize_data(train_ds=train_ds, test_ds=test_ds, ds_info=ds_info)
+    #visualize_data(train_ds=train_ds, test_ds=test_ds, ds_info=ds_info)
 
     # Test model A -> choose a ResNet config
     model_name = "V13_A"
@@ -186,7 +186,7 @@ def main():
     config50 = ((3, 4, 6, 3), ResBottleneck)
     config101 = ((3, 4, 23, 3), ResBottleneck)
     config151 = ((3, 8, 36, 3), ResBottleneck)
-    model_A = build_model_A(config34)
+    model_A = build_model_A(config151)
     print("Model_A test starting:")
     test_model(model=model_A, model_name=model_name, train_ds=train_ds, test_ds=test_ds)
 
@@ -289,5 +289,18 @@ def build_model_A(config):
 
 
 if __name__ == "__main__":
+    gpus = tf.config.list_physical_devices("GPU")
+    print(gpus)
+    if gpus:
+        # Restrict TensorFlow to only allocate 1GB of memory on the first GPU
+        try:
+            tf.config.set_logical_device_configuration(
+                gpus[0], [tf.config.LogicalDeviceConfiguration(memory_limit=11264)]
+            )
+            logical_gpus = tf.config.list_logical_devices("GPU")
+            print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
+        except RuntimeError as e:
+            # Virtual devices must be set before GPUs have been initialized
+            print(e)
     main()
-    plt.show()
+
