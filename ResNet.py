@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 import tensorflow_datasets as tfds
 import utils
+import time
 from keras import backend as K
 from keras.callbacks import (
     EarlyStopping,
@@ -177,7 +178,7 @@ def main():
         class_names=class_names,
     )
     # visualize new data
-    #visualize_data(train_ds=train_ds, test_ds=test_ds, ds_info=ds_info)
+    # visualize_data(train_ds=train_ds, test_ds=test_ds, ds_info=ds_info)
 
     # Test model A -> choose a ResNet config
     model_name = "V13_A"
@@ -188,7 +189,9 @@ def main():
     config151 = ((3, 8, 36, 3), ResBottleneck)
     model_A = build_model_A(config151)
     print("Model_A test starting:")
+    start = time.time()
     test_model(model=model_A, model_name=model_name, train_ds=train_ds, test_ds=test_ds)
+    print("Time for training Model_A is {} min".format((time.time() - start)/60))
 
 
 def test_model(model, model_name, train_ds, test_ds):
@@ -201,7 +204,7 @@ def test_model(model, model_name, train_ds, test_ds):
     class LRTensorBoard(TensorBoard):
         # add other arguments to __init__ if you need
         def __init__(self, log_dir, **kwargs):
-            super().__init__(log_dir=log_dir, histogram_freq=3, **kwargs)
+            super().__init__(log_dir=log_dir, histogram_freq=3, profile_batch='20,40', **kwargs)
 
         def on_epoch_end(self, epoch, logs=None):
             logs = logs or {}
@@ -209,7 +212,7 @@ def test_model(model, model_name, train_ds, test_ds):
             super().on_epoch_end(epoch, logs)
 
     scheduler_callback = utils.WarmUpCosineDecayScheduler(
-        learning_rate_base=0.01, warmup_epoch=15, hold_base_rate_steps=5, verbose=1
+        learning_rate_base=0.01, warmup_epoch=1, hold_base_rate_steps=5, verbose=1
     )
     checkpoint_callback = ModelCheckpoint(
         f"model_checkpoints/training_checkpoints/{model_name}",
@@ -217,13 +220,14 @@ def test_model(model, model_name, train_ds, test_ds):
         verbose=1,
         save_best_only=True,
         mode="auto",
+        save_freq = 'epoch'
     )
     # Train model
 
     # train for 20 epochs
     history = model.fit(
         train_ds,
-        epochs=80,
+        epochs=3,
         validation_data=test_ds,
         callbacks=[
             scheduler_callback,
@@ -303,4 +307,3 @@ if __name__ == "__main__":
             # Virtual devices must be set before GPUs have been initialized
             print(e)
     main()
-
