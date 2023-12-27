@@ -191,7 +191,7 @@ def main():
     print("Model_A test starting:")
     start = time.time()
     test_model(model=model_A, model_name=model_name, train_ds=train_ds, test_ds=test_ds)
-    print("Time for training Model_A is {} min".format((time.time() - start)/60))
+    print("Time for training Model_A is {} min".format((time.time() - start) / 60))
 
 
 def test_model(model, model_name, train_ds, test_ds):
@@ -204,13 +204,18 @@ def test_model(model, model_name, train_ds, test_ds):
     class LRTensorBoard(TensorBoard):
         # add other arguments to __init__ if you need
         def __init__(self, log_dir, **kwargs):
-            super().__init__(log_dir=log_dir, histogram_freq=3, profile_batch='20,40', **kwargs)
+            super().__init__(
+                log_dir=log_dir, histogram_freq=3, profile_batch="20,40", **kwargs
+            )
 
         def on_epoch_end(self, epoch, logs=None):
             logs = logs or {}
             logs.update({"lr": K.eval(self.model.optimizer.lr)})
             super().on_epoch_end(epoch, logs)
 
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(
+        log_dir="./logsis", histogram_freq=1, profile_batch="50,60"
+    )
     scheduler_callback = utils.WarmUpCosineDecayScheduler(
         learning_rate_base=0.01, warmup_epoch=1, hold_base_rate_steps=5, verbose=1
     )
@@ -220,7 +225,7 @@ def test_model(model, model_name, train_ds, test_ds):
         verbose=1,
         save_best_only=True,
         mode="auto",
-        save_freq = 'epoch'
+        save_freq="epoch",
     )
     # Train model
 
@@ -231,8 +236,8 @@ def test_model(model, model_name, train_ds, test_ds):
         validation_data=test_ds,
         callbacks=[
             scheduler_callback,
-            checkpoint_callback,
-            LRTensorBoard(log_dir=LOG_DIR),
+            #checkpoint_callback,
+            tensorboard_callback,
         ],
     )
 
@@ -293,6 +298,7 @@ def build_model_A(config):
 
 
 if __name__ == "__main__":
+    print('seeking gpu')
     gpus = tf.config.list_physical_devices("GPU")
     print(gpus)
     if gpus:
