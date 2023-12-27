@@ -214,7 +214,7 @@ def test_model(model, model_name, train_ds, test_ds):
     checkpoint_callback = ModelCheckpoint(
         f"model_checkpoints/training_checkpoints/{model_name}",
         monitor="val_loss",
-        verbose=0,
+        verbose=1,
         save_best_only=True,
         mode="auto",
     )
@@ -227,7 +227,7 @@ def test_model(model, model_name, train_ds, test_ds):
         validation_data=test_ds,
         callbacks=[
             scheduler_callback,
-            #checkpoint_callback,
+            checkpoint_callback,
             LRTensorBoard(log_dir=LOG_DIR),
         ],
     )
