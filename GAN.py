@@ -196,7 +196,7 @@ def generate_and_save_images(model, epoch, test_input):
 
 
 def main():
-    ds = list(tfds.load('mnist', split='train'))
+    ds, info = tfds.load('fashion_mnist', split='train', with_info=True)
     train_images = np.array([x['image'] for x in ds])
     train_images = train_images.reshape(train_images.shape[0], 28, 28, 1).astype(
         "float32"
@@ -227,7 +227,7 @@ def main():
         generator=generator,
         discriminator=discriminator,
     )
-    EPOCHS = 20
+    EPOCHS = 200
     noise_dim = 100
     num_examples_to_generate = 16
 
