@@ -3,6 +3,8 @@ GAN for the MNIST dataset
 """
 
 import tensorflow as tf
+import tensorflow_datasets as tfds
+import numpy as np
 import matplotlib.pyplot as plt
 import os
 from keras import layers
@@ -194,7 +196,8 @@ def generate_and_save_images(model, epoch, test_input):
 
 
 def main():
-    (train_images, train_labels), (_, _) = tf.keras.datasets.mnist.load_data()
+    ds = list(tfds.load('mnist', split='train'))
+    train_images = np.array([x['image'] for x in ds])
     train_images = train_images.reshape(train_images.shape[0], 28, 28, 1).astype(
         "float32"
     )
@@ -224,7 +227,7 @@ def main():
         generator=generator,
         discriminator=discriminator,
     )
-    EPOCHS = 2500
+    EPOCHS = 20
     noise_dim = 100
     num_examples_to_generate = 16
 
