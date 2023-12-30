@@ -51,7 +51,12 @@ def make_generator_model():
 
     model.add(
         layers.Conv2DTranspose(
-            3, (5, 5), strides=(2, 2), padding="same", use_bias=False, activation="tanh"
+            3,
+            (5, 5),
+            strides=(2, 2),
+            padding="same",
+            use_bias=False,
+            activation="sigmoid",
         )
     )
     assert model.output_shape == (None, 32, 32, 3)
@@ -97,7 +102,8 @@ def discriminator_loss(real_output, fake_output):
 def generator_loss(fake_output):
     return cross_entropy(tf.ones_like(fake_output), fake_output)
 
-#------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Notice the use of `tf.function`
 # This annotation causes the function to be "compiled".
 @tf.function
@@ -161,28 +167,34 @@ def train(
             )
 
         # Produce images every 10 epochs as you go
-        if (epoch +1) % 10 == 0:generate_and_save_images(generator, epoch + 1, seed)
+        if (epoch + 1) % 10 == 0:
+            generate_and_save_images(generator, epoch + 1, seed, dataset)
 
         # Save the model every 50 epochs
-        if (epoch + 1) % 50 == 0:checkpoint.save(file_prefix=checkpoint_prefix)
+        if (epoch + 1) % 50 == 0:
+            checkpoint.save(file_prefix=checkpoint_prefix)
 
         print("Time for epoch {} is {} sec".format(epoch + 1, time.time() - start))
 
     # Generate after the final epoch
-    generate_and_save_images(generator, epochs, seed)
+    generate_and_save_images(generator, epochs, seed, dataset)
 
 
-#----------------------------------------------------------------------------------------------------------------------------------
-def generate_and_save_images(model, epoch, test_input):
+# ----------------------------------------------------------------------------------------------------------------------------------
+def generate_and_save_images(model, epoch, test_input, dataset):
     # Notice `training` is set to False.
     # This is so all layers run in inference mode (batchnorm).
     predictions = model(test_input, training=False)
     print(predictions.shape)
     fig = plt.figure(figsize=(4, 4))
 
-    for i in range(predictions.shape[0]):
+    for i in range(predictions.shape[0] // 2):
         plt.subplot(4, 4, i + 1)
-        plt.imshow(predictions[i, :, :, 0] * 127.5 + 127.5)
+        plt.imshow(predictions[i, :, :, :] * 255)
+        plt.axis("off")
+    for i in range(8, 16):
+        plt.subplot(4, 4, i + 1)
+        plt.imshow(tf.cast(next(iter(dataset))[i] * 255, tf.dtypes.int16))
         plt.axis("off")
     os.makedirs(
         f"Gan_Tut/plots/{gan_dir}", exist_ok=True
@@ -191,15 +203,14 @@ def generate_and_save_images(model, epoch, test_input):
     plt.close()
 
 
-
-#-------------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------------
 def main():
-    ds, info = tfds.load('cifar10', split='train', with_info=True)
-    train_images = np.array([x['image'] for x in ds])
+    ds, info = tfds.load("cifar10", split="train", with_info=True)
+    train_images = np.array([x["image"] for x in ds if x["label"] == 0])
     train_images = train_images.reshape(train_images.shape[0], 32, 32, 3).astype(
         "float32"
     )
-    train_images = (train_images - 127.5) / 127.5  # Normalize the images to [-1, 1]
+    train_images = train_images / 255  # Normalize the images to [-1, 1]
     BUFFER_SIZE = 60000
     BATCH_SIZE = 512
     # Batch and shuffle the data
@@ -220,13 +231,14 @@ def main():
         generator=generator,
         discriminator=discriminator,
     )
-    EPOCHS = 2000
+    EPOCHS = 2500
     noise_dim = 100
     num_examples_to_generate = 16
 
     # You will reuse this seed overtime (so it's easier)
     # to visualize progress in the animated GIF)
     seed = tf.random.normal([num_examples_to_generate, noise_dim])
+    checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
     train(
         train_dataset,
         EPOCHS,
