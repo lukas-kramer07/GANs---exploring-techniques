@@ -9,9 +9,8 @@ import matplotlib.pyplot as plt
 import os
 from keras import layers
 import time
-from IPython import display
 
-gan_dir = "Fashion_Mnist_32"
+gan_dir = "Cifar10_32"
 
 
 def make_generator_model():
@@ -98,7 +97,7 @@ def discriminator_loss(real_output, fake_output):
 def generator_loss(fake_output):
     return cross_entropy(tf.ones_like(fake_output), fake_output)
 
-
+#------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Notice the use of `tf.function`
 # This annotation causes the function to be "compiled".
 @tf.function
@@ -161,21 +160,19 @@ def train(
                 discriminator_optimizer,
             )
 
-        # Produce images for the GIF as you go
-        display.clear_output(wait=True)
-        generate_and_save_images(generator, epoch + 1, seed)
+        # Produce images every 10 epochs as you go
+        if (epoch +1) % 10 == 0:generate_and_save_images(generator, epoch + 1, seed)
 
-        # Save the model every 15 epochs
-        if (epoch + 1) % 15 == 0:
-            checkpoint.save(file_prefix=checkpoint_prefix)
+        # Save the model every 50 epochs
+        if (epoch + 1) % 50 == 0:checkpoint.save(file_prefix=checkpoint_prefix)
 
         print("Time for epoch {} is {} sec".format(epoch + 1, time.time() - start))
 
     # Generate after the final epoch
-    display.clear_output(wait=True)
     generate_and_save_images(generator, epochs, seed)
 
 
+#----------------------------------------------------------------------------------------------------------------------------------
 def generate_and_save_images(model, epoch, test_input):
     # Notice `training` is set to False.
     # This is so all layers run in inference mode (batchnorm).
@@ -194,15 +191,15 @@ def generate_and_save_images(model, epoch, test_input):
     plt.close()
 
 
+
+#-------------------------------------------------------------------------------------------------------
 def main():
-    ds, info = tfds.load('fashion_mnist', split='train', with_info=True)
+    ds, info = tfds.load('cifar10', split='train', with_info=True)
     train_images = np.array([x['image'] for x in ds])
-    train_images = train_images.reshape(train_images.shape[0], 28, 28, 1).astype(
+    train_images = train_images.reshape(train_images.shape[0], 32, 32, 3).astype(
         "float32"
     )
-    train_images = tf.image.resize(
-        (train_images - 127.5) / 127.5, (112, 112)
-    )  # Normalize the images to [-1, 1]
+    train_images = (train_images - 127.5) / 127.5  # Normalize the images to [-1, 1]
     BUFFER_SIZE = 60000
     BATCH_SIZE = 512
     # Batch and shuffle the data
@@ -223,7 +220,7 @@ def main():
         generator=generator,
         discriminator=discriminator,
     )
-    EPOCHS = 200
+    EPOCHS = 2000
     noise_dim = 100
     num_examples_to_generate = 16
 
