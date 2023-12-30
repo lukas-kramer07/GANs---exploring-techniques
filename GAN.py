@@ -206,7 +206,7 @@ def generate_and_save_images(model, epoch, test_input, dataset):
 # -------------------------------------------------------------------------------------------------------
 def main():
     ds, info = tfds.load("cifar10", split="train", with_info=True)
-    train_images = np.array([x["image"] for x in ds if x["label"] == 0])
+    train_images = np.array([x["image"] for x in ds if x["label"] == 2])
     train_images = train_images.reshape(train_images.shape[0], 32, 32, 3).astype(
         "float32"
     )
@@ -238,7 +238,7 @@ def main():
     # You will reuse this seed overtime (so it's easier)
     # to visualize progress in the animated GIF)
     seed = tf.random.normal([num_examples_to_generate, noise_dim])
-    checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
+    #checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
     train(
         train_dataset,
         EPOCHS,
