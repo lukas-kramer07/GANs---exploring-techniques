@@ -166,12 +166,12 @@ def train(
                 discriminator_optimizer,
             )
 
-        # Produce images every 10 epochs as you go
-        if (epoch + 1) % 10 == 0:
+        # Produce images every 1000 epochs as you go
+        if (epoch + 1) % 1000 == 0:
             generate_and_save_images(generator, epoch + 1, seed, dataset)
 
-        # Save the model every 50 epochs
-        if (epoch + 1) % 50 == 0:
+        # Save the model every 1000 epochs
+        if (epoch + 1) % 1000 == 0:
             checkpoint.save(file_prefix=checkpoint_prefix)
 
         print("Time for epoch {} is {} sec".format(epoch + 1, time.time() - start))
@@ -231,7 +231,7 @@ def main():
         generator=generator,
         discriminator=discriminator,
     )
-    EPOCHS = 2500
+    EPOCHS = 15000
     noise_dim = 100
     num_examples_to_generate = 16
 
