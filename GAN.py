@@ -11,33 +11,24 @@ from keras import layers
 import time
 from IPython import display
 
-gan_dir = "nums112_normal_size"
+gan_dir = "Fashion_Mnist_32"
 
 
 def make_generator_model():
     model = tf.keras.Sequential()
-    model.add(layers.Dense(7 * 7 * 256, use_bias=False, input_shape=(100,)))
+    model.add(layers.Dense(8 * 8 * 256, use_bias=False, input_shape=(100,)))
     model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
 
-    model.add(layers.Reshape((7, 7, 256)))
-    assert model.output_shape == (None, 7, 7, 256)  # Note: None is the batch size
+    model.add(layers.Reshape((8, 8, 256)))
+    assert model.output_shape == (None, 8, 8, 256)  # Note: None is the batch size
 
     model.add(
         layers.Conv2DTranspose(
-            128, (5, 5), strides=(2, 2), padding="same", use_bias=False
+            128, (5, 5), strides=(1, 1), padding="same", use_bias=False
         )
     )
-    assert model.output_shape == (None, 14, 14, 128)
-    model.add(layers.BatchNormalization())
-    model.add(layers.LeakyReLU())
-
-    model.add(
-        layers.Conv2DTranspose(
-            64, (5, 5), strides=(2, 2), padding="same", use_bias=False
-        )
-    )
-    assert model.output_shape == (None, 28, 28, 64)
+    assert model.output_shape == (None, 8, 8, 128)
     model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
 
@@ -46,16 +37,25 @@ def make_generator_model():
             64, (5, 5), strides=(2, 2), padding="same", use_bias=False
         )
     )
-    assert model.output_shape == (None, 56, 56, 64)
+    assert model.output_shape == (None, 16, 16, 64)
     model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
 
     model.add(
         layers.Conv2DTranspose(
-            1, (5, 5), strides=(2, 2), padding="same", use_bias=False, activation="tanh"
+            64, (5, 5), strides=(1, 1), padding="same", use_bias=False
         )
     )
-    assert model.output_shape == (None, 112, 112, 1)
+    assert model.output_shape == (None, 16, 16, 64)
+    model.add(layers.BatchNormalization())
+    model.add(layers.LeakyReLU())
+
+    model.add(
+        layers.Conv2DTranspose(
+            3, (5, 5), strides=(2, 2), padding="same", use_bias=False, activation="tanh"
+        )
+    )
+    assert model.output_shape == (None, 32, 32, 3)
 
     return model
 
@@ -64,7 +64,7 @@ def make_discriminator_model():
     model = tf.keras.Sequential()
     model.add(
         layers.Conv2D(
-            64, (5, 5), strides=(2, 2), padding="valid", input_shape=[112, 112, 1]
+            64, (5, 5), strides=(2, 2), padding="valid", input_shape=[32, 32, 3]
         )
     )
     model.add(layers.LeakyReLU())
@@ -115,7 +115,6 @@ def train_step(
 
     with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
         generated_images = generator(noise, training=True)
-
         real_output = discriminator(images, training=True)
         fake_output = discriminator(generated_images, training=True)
 
@@ -181,12 +180,12 @@ def generate_and_save_images(model, epoch, test_input):
     # Notice `training` is set to False.
     # This is so all layers run in inference mode (batchnorm).
     predictions = model(test_input, training=False)
-
+    print(predictions.shape)
     fig = plt.figure(figsize=(4, 4))
 
     for i in range(predictions.shape[0]):
         plt.subplot(4, 4, i + 1)
-        plt.imshow(predictions[i, :, :, 0] * 127.5 + 127.5, cmap="gray")
+        plt.imshow(predictions[i, :, :, 0] * 127.5 + 127.5)
         plt.axis("off")
     os.makedirs(
         f"Gan_Tut/plots/{gan_dir}", exist_ok=True
@@ -214,9 +213,6 @@ def main():
     )
     generator = make_generator_model()
     discriminator = make_discriminator_model()
-    print( discriminator(
-        generator(tf.random.normal([1, 100]))
-    ))
     generator_optimizer = tf.keras.optimizers.Adam(1e-4)
     discriminator_optimizer = tf.keras.optimizers.Adam(1e-4)
     checkpoint_dir = "./training_checkpoints"
