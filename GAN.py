@@ -190,7 +190,7 @@ def generate_and_save_images(model, epoch, test_input, dataset):
 
     for i in range(predictions.shape[0] // 2):
         plt.subplot(4, 4, i + 1)
-        plt.imshow(predictions[i, :, :, :] * 255)
+        plt.imshow(tf.cast(predictions[i, :, :, :] * 255, tf.dtypes.int16))
         plt.axis("off")
     for i in range(8, 16):
         plt.subplot(4, 4, i + 1)
