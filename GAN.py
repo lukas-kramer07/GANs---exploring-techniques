@@ -10,24 +10,35 @@ import os
 from keras import layers
 import time
 
-gan_dir = "Cifar10_32"
+from ResNet import BATCH_SIZE
+
+gan_dir = "birs_224"
 
 
 def make_generator_model():
     model = tf.keras.Sequential()
-    model.add(layers.Dense(8 * 8 * 256, use_bias=False, input_shape=(100,)))
+    model.add(layers.Dense(7 * 7 * 256, use_bias=False, input_shape=(100,)))
     model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
 
-    model.add(layers.Reshape((8, 8, 256)))
-    assert model.output_shape == (None, 8, 8, 256)  # Note: None is the batch size
+    model.add(layers.Reshape((7, 7, 256)))
+    assert model.output_shape == (None, 7, 7, 256)  # Note: None is the batch size
 
     model.add(
         layers.Conv2DTranspose(
-            128, (5, 5), strides=(1, 1), padding="same", use_bias=False
+            128, (5, 5), strides=(2, 2), padding="same", use_bias=False
         )
     )
-    assert model.output_shape == (None, 8, 8, 128)
+    assert model.output_shape == (None, 14, 14, 128)
+    model.add(layers.BatchNormalization())
+    model.add(layers.LeakyReLU())
+
+    model.add(
+        layers.Conv2DTranspose(
+            128, (5, 5), strides=(2, 2), padding="same", use_bias=False
+        )
+    )
+    assert model.output_shape == (None, 28, 28, 128)
     model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
 
@@ -36,16 +47,16 @@ def make_generator_model():
             64, (5, 5), strides=(2, 2), padding="same", use_bias=False
         )
     )
-    assert model.output_shape == (None, 16, 16, 64)
+    assert model.output_shape == (None, 56, 56, 64)
     model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
 
     model.add(
         layers.Conv2DTranspose(
-            64, (5, 5), strides=(1, 1), padding="same", use_bias=False
+            64, (5, 5), strides=(2, 2), padding="same", use_bias=False
         )
     )
-    assert model.output_shape == (None, 16, 16, 64)
+    assert model.output_shape == (None, 112, 112, 64)
     model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
 
@@ -59,7 +70,7 @@ def make_generator_model():
             activation="sigmoid",
         )
     )
-    assert model.output_shape == (None, 32, 32, 3)
+    assert model.output_shape == (None, 224, 224, 3)
 
     return model
 
@@ -68,7 +79,7 @@ def make_discriminator_model():
     model = tf.keras.Sequential()
     model.add(
         layers.Conv2D(
-            64, (5, 5), strides=(2, 2), padding="valid", input_shape=[32, 32, 3]
+            64, (5, 5), strides=(2, 2), padding="valid", input_shape=[224, 224, 3]
         )
     )
     model.add(layers.LeakyReLU())
@@ -79,6 +90,10 @@ def make_discriminator_model():
     model.add(layers.Dropout(0.3))
 
     model.add(layers.Conv2D(128, (5, 5), strides=(2, 2), padding="valid"))
+    model.add(layers.LeakyReLU())
+    model.add(layers.Dropout(0.3))
+
+    model.add(layers.Conv2D(256, (5, 5), strides=(2, 2), padding="valid"))
     model.add(layers.LeakyReLU())
     model.add(layers.Dropout(0.1))
 
@@ -166,12 +181,12 @@ def train(
                 discriminator_optimizer,
             )
 
-        # Produce images every 1000 epochs as you go
-        if (epoch + 1) % 1000 == 0:
+        # Produce images every 10 epochs as you go
+        if (epoch + 1) % 10 == 0:
             generate_and_save_images(generator, epoch + 1, seed, dataset)
 
         # Save the model every 1000 epochs
-        if (epoch + 1) % 1000 == 0:
+        if (epoch + 1) % 50 == 0:
             checkpoint.save(file_prefix=checkpoint_prefix)
 
         print("Time for epoch {} is {} sec".format(epoch + 1, time.time() - start))
@@ -204,21 +219,31 @@ def generate_and_save_images(model, epoch, test_input, dataset):
 
 
 # -------------------------------------------------------------------------------------------------------
+
+
+def normalize(image, label):
+    return tf.cast(image / 255, tf.dtypes.float32)
+
+
 def main():
-    ds, info = tfds.load("cifar10", split="train", with_info=True)
-    train_images = np.array([x["image"] for x in ds if x["label"] == 2])
-    train_images = train_images.reshape(train_images.shape[0], 32, 32, 3).astype(
-        "float32"
-    )
-    train_images = train_images / 255  # Normalize the images to [-1, 1]
-    BUFFER_SIZE = 60000
-    BATCH_SIZE = 512
-    # Batch and shuffle the data
+    BATCH_SIZE = 112
+    BUFFER_SIZE = 80000
+    AUTOTUNE = tf.data.experimental.AUTOTUNE
     train_dataset = (
-        tf.data.Dataset.from_tensor_slices(train_images)
-        .shuffle(BUFFER_SIZE)
+        tf.keras.utils.image_dataset_from_directory(
+            "../Dataset/test",
+            image_size=(224, 224),
+            batch_size=None,
+            shuffle=True,
+        )
+        .map(normalize, num_parallel_calls=AUTOTUNE)
+        .cache()
+        # .shuffle(BUFFER_SIZE)
         .batch(BATCH_SIZE)
+        .prefetch(AUTOTUNE)
     )
+
+    print("alles klar")
     generator = make_generator_model()
     discriminator = make_discriminator_model()
     generator_optimizer = tf.keras.optimizers.Adam(1e-4)
@@ -231,14 +256,15 @@ def main():
         generator=generator,
         discriminator=discriminator,
     )
-    EPOCHS = 15000
+    EPOCHS = 1000
     noise_dim = 100
     num_examples_to_generate = 16
 
     # You will reuse this seed overtime (so it's easier)
     # to visualize progress in the animated GIF)
     seed = tf.random.normal([num_examples_to_generate, noise_dim])
-    #checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
+    checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
+    print('starte Training')
     train(
         train_dataset,
         EPOCHS,
@@ -261,7 +287,7 @@ if __name__ == "__main__":
         # Restrict TensorFlow to only allocate 1GB of memory on the first GPU
         try:
             tf.config.set_logical_device_configuration(
-                gpus[0], [tf.config.LogicalDeviceConfiguration(memory_limit=10240)]
+                gpus[0], [tf.config.LogicalDeviceConfiguration(memory_limit=11464)]
             )
             logical_gpus = tf.config.list_logical_devices("GPU")
             print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
