@@ -8,7 +8,7 @@ import tensorflow as tf
 import tensorflow_datasets as tfds
 import utils
 import time
-from keras import backend as K
+from keras import backend as Kpi
 from keras.callbacks import (
     EarlyStopping,
     LearningRateScheduler,
@@ -29,7 +29,7 @@ from keras.layers import (
 )
 from keras.optimizers import Adam
 from keras.losses import CategoricalCrossentropy
-
+import keras.backend as K
 IM_SIZE = 32
 BATCH_SIZE = 128
 class_names = [
@@ -232,7 +232,7 @@ def test_model(model, model_name, train_ds, test_ds):
     # train for 20 epochs
     history = model.fit(
         train_ds,
-        epochs=3,
+        epochs=80,
         validation_data=test_ds,
         callbacks=[
             scheduler_callback,
