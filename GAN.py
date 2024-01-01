@@ -3,14 +3,11 @@ GAN for the MNIST dataset
 """
 
 import tensorflow as tf
-import tensorflow_datasets as tfds
-import numpy as np
+
 import matplotlib.pyplot as plt
 import os
 from keras import layers
 import time
-
-from ResNet import BATCH_SIZE
 
 gan_dir = "birs_224"
 
@@ -182,7 +179,7 @@ def train(
             )
 
         # Produce images every 10 epochs as you go
-        if (epoch + 1) % 10 == 0:
+        if (epoch + 1) % 20 == 0:
             generate_and_save_images(generator, epoch + 1, seed, dataset)
 
         # Save the model every 1000 epochs
@@ -201,7 +198,7 @@ def generate_and_save_images(model, epoch, test_input, dataset):
     # This is so all layers run in inference mode (batchnorm).
     predictions = model(test_input, training=False)
     print(predictions.shape)
-    fig = plt.figure(figsize=(4, 4))
+    _ = plt.figure(figsize=(4, 4))
 
     for i in range(predictions.shape[0] // 2):
         plt.subplot(4, 4, i + 1)
@@ -221,29 +218,34 @@ def generate_and_save_images(model, epoch, test_input, dataset):
 # -------------------------------------------------------------------------------------------------------
 
 
-def normalize(image, label):
+def normalize(image):
     return tf.cast(image / 255, tf.dtypes.float32)
 
 
 def main():
-    BATCH_SIZE = 112
+    BATCH_SIZE = 64
     BUFFER_SIZE = 80000
     AUTOTUNE = tf.data.experimental.AUTOTUNE
     train_dataset = (
         tf.keras.utils.image_dataset_from_directory(
-            "../Dataset/test",
+            "/home/lukas/Code/Dataset/train",
             image_size=(224, 224),
             batch_size=None,
             shuffle=True,
+            labels= None,
+            validation_split=0.5,
+            subset='validation',
+            seed = 123
         )
         .map(normalize, num_parallel_calls=AUTOTUNE)
         .cache()
-        # .shuffle(BUFFER_SIZE)
+        #.shuffle(BUFFER_SIZE)
         .batch(BATCH_SIZE)
         .prefetch(AUTOTUNE)
     )
 
     print("alles klar")
+    print(next(iter(train_dataset))[0].shape)
     generator = make_generator_model()
     discriminator = make_discriminator_model()
     generator_optimizer = tf.keras.optimizers.Adam(1e-4)
@@ -286,9 +288,7 @@ if __name__ == "__main__":
     if gpus:
         # Restrict TensorFlow to only allocate 1GB of memory on the first GPU
         try:
-            tf.config.set_logical_device_configuration(
-                gpus[0], [tf.config.LogicalDeviceConfiguration(memory_limit=11464)]
-            )
+            tf.config.experimental.set_memory_growth(gpus[0], True)
             logical_gpus = tf.config.list_logical_devices("GPU")
             print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
         except RuntimeError as e:
