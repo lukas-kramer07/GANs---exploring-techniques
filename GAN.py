@@ -9,24 +9,24 @@ import os
 from keras import layers
 import time
 
-gan_dir = "birs_224"
+gan_dir = "birs_64"
 
 
 def make_generator_model():
     model = tf.keras.Sequential()
-    model.add(layers.Dense(7 * 7 * 256, use_bias=False, input_shape=(100,)))
+    model.add(layers.Dense(8 * 8 * 256, use_bias=False, input_shape=(100,)))
     model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
 
-    model.add(layers.Reshape((7, 7, 256)))
-    assert model.output_shape == (None, 7, 7, 256)  # Note: None is the batch size
+    model.add(layers.Reshape((8, 8, 256)))
+    assert model.output_shape == (None, 8, 8, 256)  # Note: None is the batch size
 
     model.add(
         layers.Conv2DTranspose(
             128, (5, 5), strides=(2, 2), padding="same", use_bias=False
         )
     )
-    assert model.output_shape == (None, 14, 14, 128)
+    assert model.output_shape == (None, 16, 16, 128)
     model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
 
@@ -35,7 +35,7 @@ def make_generator_model():
             128, (5, 5), strides=(2, 2), padding="same", use_bias=False
         )
     )
-    assert model.output_shape == (None, 28, 28, 128)
+    assert model.output_shape == (None, 32, 32, 128)
     model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
 
@@ -44,16 +44,7 @@ def make_generator_model():
             64, (5, 5), strides=(2, 2), padding="same", use_bias=False
         )
     )
-    assert model.output_shape == (None, 56, 56, 64)
-    model.add(layers.BatchNormalization())
-    model.add(layers.LeakyReLU())
-
-    model.add(
-        layers.Conv2DTranspose(
-            64, (5, 5), strides=(2, 2), padding="same", use_bias=False
-        )
-    )
-    assert model.output_shape == (None, 112, 112, 64)
+    assert model.output_shape == (None, 64, 64, 64)
     model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
 
@@ -61,13 +52,13 @@ def make_generator_model():
         layers.Conv2DTranspose(
             3,
             (5, 5),
-            strides=(2, 2),
+            strides=(1, 1),
             padding="same",
             use_bias=False,
             activation="sigmoid",
         )
     )
-    assert model.output_shape == (None, 224, 224, 3)
+    assert model.output_shape == (None, 64, 64, 3)
 
     return model
 
@@ -76,7 +67,7 @@ def make_discriminator_model():
     model = tf.keras.Sequential()
     model.add(
         layers.Conv2D(
-            64, (5, 5), strides=(2, 2), padding="valid", input_shape=[224, 224, 3]
+            64, (5, 5), strides=(2, 2), padding="valid", input_shape=[64, 64, 3]
         )
     )
     model.add(layers.LeakyReLU())
@@ -89,10 +80,6 @@ def make_discriminator_model():
     model.add(layers.Conv2D(128, (5, 5), strides=(2, 2), padding="valid"))
     model.add(layers.LeakyReLU())
     model.add(layers.Dropout(0.3))
-
-    model.add(layers.Conv2D(256, (5, 5), strides=(2, 2), padding="valid"))
-    model.add(layers.LeakyReLU())
-    model.add(layers.Dropout(0.1))
 
     model.add(layers.Flatten())
     model.add(layers.Dense(1))
@@ -219,7 +206,7 @@ def generate_and_save_images(model, epoch, test_input, dataset):
 
 
 def normalize(image):
-    return tf.cast(image / 255, tf.dtypes.float32)
+    return tf.cast(tf.image.resize(image, (64,64)) / 255, tf.dtypes.float32)
 
 
 def main():
@@ -233,9 +220,6 @@ def main():
             batch_size=None,
             shuffle=True,
             labels= None,
-            validation_split=0.5,
-            subset='validation',
-            seed = 123
         )
         .map(normalize, num_parallel_calls=AUTOTUNE)
         .cache()
