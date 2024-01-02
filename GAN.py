@@ -9,7 +9,7 @@ import os
 from keras import layers
 import time
 
-gan_dir = "birs_64"
+gan_dir = "birs_32"
 
 
 def make_generator_model():
@@ -41,15 +41,6 @@ def make_generator_model():
 
     model.add(
         layers.Conv2DTranspose(
-            64, (5, 5), strides=(2, 2), padding="same", use_bias=False
-        )
-    )
-    assert model.output_shape == (None, 64, 64, 64)
-    model.add(layers.BatchNormalization())
-    model.add(layers.LeakyReLU())
-
-    model.add(
-        layers.Conv2DTranspose(
             3,
             (5, 5),
             strides=(1, 1),
@@ -58,7 +49,7 @@ def make_generator_model():
             activation="sigmoid",
         )
     )
-    assert model.output_shape == (None, 64, 64, 3)
+    assert model.output_shape == (None, 32, 32, 3)
 
     return model
 
@@ -67,7 +58,7 @@ def make_discriminator_model():
     model = tf.keras.Sequential()
     model.add(
         layers.Conv2D(
-            64, (5, 5), strides=(2, 2), padding="valid", input_shape=[64, 64, 3]
+            64, (5, 5), strides=(2, 2), padding="valid", input_shape=[32, 32, 3]
         )
     )
     model.add(layers.LeakyReLU())
@@ -206,7 +197,7 @@ def generate_and_save_images(model, epoch, test_input, dataset):
 
 
 def normalize(image):
-    return tf.cast(tf.image.resize(image, (64,64)) / 255, tf.dtypes.float32)
+    return tf.cast(tf.image.resize(image, (32,32)) / 255, tf.dtypes.float32)
 
 
 def main():
@@ -242,14 +233,14 @@ def main():
         generator=generator,
         discriminator=discriminator,
     )
-    EPOCHS = 1000
+    EPOCHS = 5000
     noise_dim = 100
     num_examples_to_generate = 16
 
     # You will reuse this seed overtime (so it's easier)
     # to visualize progress in the animated GIF)
     seed = tf.random.normal([num_examples_to_generate, noise_dim])
-    checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
+    #checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
     print('starte Training')
     train(
         train_dataset,
