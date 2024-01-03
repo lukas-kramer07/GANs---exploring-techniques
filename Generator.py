@@ -82,7 +82,7 @@ def make_discriminator_model():
     model.add(layers.Dropout(0.3))
 
     model.add(layers.Flatten())
-    model.add(layers.Dense(1))
+    model.add(layers.Dense(1, activation='sigmoid'))
 
     return model
 
@@ -146,7 +146,7 @@ def main():
     )
     checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir)).expect_partial()
     print('starte Training')
-    generate_and_save_images(generator, discriminator, num_images=10)
+    generate_and_save_images(generator, discriminator, num_images=1000)
 
 
 if __name__ == "__main__":
