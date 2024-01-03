@@ -80,7 +80,7 @@ def make_discriminator_model():
     model.add(layers.Dropout(0.3))
 
     model.add(layers.Flatten())
-    model.add(layers.Dense(1, activation='sigmoid'))
+    model.add(layers.Dense(1))
 
     return model
 
@@ -112,25 +112,26 @@ def generate_and_save_images(model, discriminator, num_images, Batch_Size):
         for i in range(Batch_Size):
             image = tf.cast(predictions[i, :, :, :] * 255, tf.dtypes.uint8).numpy()
             image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-            cv2.imwrite(f"Gan_Tut/images/{gan_dir}_unsorted/image_{i+500*n}.png", image)
+            cv2.imwrite(f"Gan_Tut/images/{gan_dir}_unsorted/image_{i+Batch_Size*n}.png", image)
 
         folder_dir = f"Gan_Tut/images/{gan_dir}_unsorted/"
         os.makedirs(f"Gan_Tut/images/{gan_dir}_sorted", exist_ok=True)
 
-        for i, image_file in enumerate(os.listdir(folder_dir)):
-            image_path = os.path.join(folder_dir, image_file)
-            image = cv2.imread(image_path)
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            image = tf.convert_to_tensor(image, dtype=tf.float32) / 255.0
-            image = tf.expand_dims(image, 0)  # Add batch dimension
-            if discriminator(image).numpy() > 0.5:
-                im_bgr = cv2.cvtColor(image.numpy()[0]*255, cv2.COLOR_RGB2BGR)
-                cv2.imwrite(f"Gan_Tut/images/{gan_dir}_sorted/image_{i+500*n}.png", im_bgr)
+    for i, image_file in enumerate(os.listdir(folder_dir)):
+        image_path = os.path.join(folder_dir, image_file)
+        image = cv2.imread(image_path)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        image = tf.convert_to_tensor(image, dtype=tf.float32) / 255.0
+        image = tf.expand_dims(image, 0)  # Add batch dimension
+        if discriminator(image).numpy() > 0.5:
+            print('theres a good one')
+            im_bgr = cv2.cvtColor(image.numpy()[0]*255, cv2.COLOR_RGB2BGR)
+            cv2.imwrite(f"Gan_Tut/images/{gan_dir}_sorted/image_{i+Batch_Size*n}.png", im_bgr)
 
 # -------------------------------------------------------------------------------------------------------
 def main():
-    BATCH_SIZE=500
-    NUM_IMAGES = 10000
+    BATCH_SIZE=300
+    NUM_IMAGES = 3000
     generator = make_generator_model()
     discriminator = make_discriminator_model()
     generator_optimizer = tf.keras.optimizers.Adam(1e-4)
