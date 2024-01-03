@@ -3,8 +3,6 @@ Generator to Generate good images
 """
 
 import tensorflow as tf
-
-import matplotlib.pyplot as plt
 import os
 from keras import layers
 import cv2
@@ -102,36 +100,37 @@ def generator_loss(fake_output):
     return cross_entropy(tf.ones_like(fake_output), fake_output)
 
 # ----------------------------------------------------------------------------------------------------------------------------------
-def generate_and_save_images(model, discriminator, num_images):
+def generate_and_save_images(model, discriminator, num_images, Batch_Size):
 
+    for n in range(num_images//Batch_Size):
+        print(f"Batch_{n}/{num_images//Batch_Size}")
+        test_input = tf.random.normal([Batch_Size, 100])
+        predictions = model(test_input, training=False)
 
-    test_input = tf.random.normal([num_images, 100])
-    predictions = model(test_input, training=False)
+        os.makedirs(f"Gan_Tut/images/{gan_dir}_unsorted", exist_ok=True)
 
-    os.makedirs(f"Gan_Tut/images/{gan_dir}_unsorted", exist_ok=True)
+        for i in range(Batch_Size):
+            image = tf.cast(predictions[i, :, :, :] * 255, tf.dtypes.uint8).numpy()
+            image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+            cv2.imwrite(f"Gan_Tut/images/{gan_dir}_unsorted/image_{i+500*n}.png", image)
 
-    for i in range(num_images):
-        image = tf.cast(predictions[i, :, :, :] * 255, tf.dtypes.uint8).numpy()
-        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-        cv2.imwrite(f"Gan_Tut/images/{gan_dir}_unsorted/image_{i}.png", image)
+        folder_dir = f"Gan_Tut/images/{gan_dir}_unsorted/"
+        os.makedirs(f"Gan_Tut/images/{gan_dir}_sorted", exist_ok=True)
 
-    folder_dir = f"Gan_Tut/images/{gan_dir}_unsorted/"
-    os.makedirs(f"Gan_Tut/images/{gan_dir}_sorted", exist_ok=True)
-
-    for i, image_file in enumerate(os.listdir(folder_dir)):
-        image_path = os.path.join(folder_dir, image_file)
-        image = cv2.imread(image_path)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        image = tf.convert_to_tensor(image, dtype=tf.float32) / 255.0
-        image = tf.expand_dims(image, 0)  # Add batch dimension
-        print(discriminator(image).numpy())
-        if discriminator(image).numpy() > 0.5:
-            im_bgr = cv2.cvtColor(image.numpy()[0]*255, cv2.COLOR_RGB2BGR)
-            cv2.imwrite(f"Gan_Tut/images/{gan_dir}_sorted/image_{i}.png", im_bgr)
+        for i, image_file in enumerate(os.listdir(folder_dir)):
+            image_path = os.path.join(folder_dir, image_file)
+            image = cv2.imread(image_path)
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            image = tf.convert_to_tensor(image, dtype=tf.float32) / 255.0
+            image = tf.expand_dims(image, 0)  # Add batch dimension
+            if discriminator(image).numpy() > 0.5:
+                im_bgr = cv2.cvtColor(image.numpy()[0]*255, cv2.COLOR_RGB2BGR)
+                cv2.imwrite(f"Gan_Tut/images/{gan_dir}_sorted/image_{i+500*n}.png", im_bgr)
 
 # -------------------------------------------------------------------------------------------------------
 def main():
-
+    BATCH_SIZE=500
+    NUM_IMAGES = 10000
     generator = make_generator_model()
     discriminator = make_discriminator_model()
     generator_optimizer = tf.keras.optimizers.Adam(1e-4)
@@ -146,7 +145,7 @@ def main():
     )
     checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir)).expect_partial()
     print('starte Training')
-    generate_and_save_images(generator, discriminator, num_images=1000)
+    generate_and_save_images(generator, discriminator, NUM_IMAGES, BATCH_SIZE)
 
 
 if __name__ == "__main__":
