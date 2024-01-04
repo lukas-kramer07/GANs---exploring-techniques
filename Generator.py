@@ -131,7 +131,7 @@ def generate_and_save_images(model, discriminator, num_images, Batch_Size):
 # -------------------------------------------------------------------------------------------------------
 def main():
     BATCH_SIZE=300
-    NUM_IMAGES = 3000
+    NUM_IMAGES = 6000
     generator = make_generator_model()
     discriminator = make_discriminator_model()
     generator_optimizer = tf.keras.optimizers.Adam(1e-4)
@@ -145,7 +145,7 @@ def main():
         discriminator=discriminator,
     )
     checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir)).expect_partial()
-    print('starte Training')
+    print('starte Suche')
     generate_and_save_images(generator, discriminator, NUM_IMAGES, BATCH_SIZE)
 
 
