@@ -207,24 +207,23 @@ def generate_and_save_images(model, epoch, test_input, dataset):
 
 
 def normalize(element):
-    image, label = element['image'], element['label']
-    print(image)
+    image = element['image']
     return tf.cast(tf.image.resize(image, (128, 128)) / 255, tf.dtypes.float32)
 
 
 
 def main():
-    BATCH_SIZE = 64
+    BATCH_SIZE = 512
     BUFFER_SIZE = 5000
     AUTOTUNE = tf.data.experimental.AUTOTUNE
     train_dataset, info = tfds.load("tf_flowers", split="train", with_info=True)
     train_dataset = (
         train_dataset
-        .map(normalize,) #num_parallel_calls=AUTOTUNE)
+        .map(normalize, num_parallel_calls=AUTOTUNE)
         .cache()
         .shuffle(BUFFER_SIZE)
         .batch(BATCH_SIZE)
-        #.prefetch(AUTOTUNE)
+        .prefetch(AUTOTUNE)
     )
 
     generator = make_generator_model()
