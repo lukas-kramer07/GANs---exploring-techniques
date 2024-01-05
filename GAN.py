@@ -3,13 +3,14 @@ GAN for the MNIST dataset
 """
 
 import tensorflow as tf
-
+import tensorflow_datasets as tfds
 import matplotlib.pyplot as plt
 import os
+import numpy as np
 from keras import layers
 import time
 
-gan_dir = "birs_64"
+gan_dir = "flowers_100"
 
 
 def make_generator_model():
@@ -52,13 +53,13 @@ def make_generator_model():
         layers.Conv2DTranspose(
             3,
             (5, 5),
-            strides=(1, 1),
+            strides=(2, 2),
             padding="same",
             use_bias=False,
             activation="sigmoid",
         )
     )
-    assert model.output_shape == (None, 64, 64, 3)
+    assert model.output_shape == (None, 128, 128, 3)
 
     return model
 
@@ -67,7 +68,7 @@ def make_discriminator_model():
     model = tf.keras.Sequential()
     model.add(
         layers.Conv2D(
-            64, (5, 5), strides=(2, 2), padding="valid", input_shape=[64, 64, 3]
+            64, (5, 5), strides=(2, 2), padding="valid", input_shape=[128, 128, 3]
         )
     )
     model.add(layers.LeakyReLU())
@@ -205,31 +206,27 @@ def generate_and_save_images(model, epoch, test_input, dataset):
 # -------------------------------------------------------------------------------------------------------
 
 
-def normalize(image):
-    return tf.cast(tf.image.resize(image, (64,64)) / 255, tf.dtypes.float32)
+def normalize(element):
+    image, label = element['image'], element['label']
+    print(image)
+    return tf.cast(tf.image.resize(image, (128, 128)) / 255, tf.dtypes.float32)
+
 
 
 def main():
     BATCH_SIZE = 64
-    BUFFER_SIZE = 80000
+    BUFFER_SIZE = 5000
     AUTOTUNE = tf.data.experimental.AUTOTUNE
+    train_dataset, info = tfds.load("tf_flowers", split="train", with_info=True)
     train_dataset = (
-        tf.keras.utils.image_dataset_from_directory(
-            "/home/lukas/Code/Dataset/train",
-            image_size=(224, 224),
-            batch_size=None,
-            shuffle=True,
-            labels= None,
-        )
-        .map(normalize, num_parallel_calls=AUTOTUNE)
+        train_dataset
+        .map(normalize,) #num_parallel_calls=AUTOTUNE)
         .cache()
-        #.shuffle(BUFFER_SIZE)
+        .shuffle(BUFFER_SIZE)
         .batch(BATCH_SIZE)
-        .prefetch(AUTOTUNE)
+        #.prefetch(AUTOTUNE)
     )
 
-    print("alles klar")
-    print(next(iter(train_dataset))[0].shape)
     generator = make_generator_model()
     discriminator = make_discriminator_model()
     generator_optimizer = tf.keras.optimizers.Adam(1e-4)
@@ -249,7 +246,7 @@ def main():
     # You will reuse this seed overtime (so it's easier)
     # to visualize progress in the animated GIF)
     seed = tf.random.normal([num_examples_to_generate, noise_dim])
-    checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
+    #checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
     print('starte Training')
     train(
         train_dataset,
