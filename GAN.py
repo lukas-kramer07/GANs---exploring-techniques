@@ -52,13 +52,13 @@ def make_generator_model():
         layers.Conv2DTranspose(
             3,
             (5, 5),
-            strides=(2, 2),
+            strides=(1, 1),
             padding="same",
             use_bias=False,
             activation="sigmoid",
         )
     )
-    assert model.output_shape == (None, 128, 128, 3)
+    assert model.output_shape == (None, 64, 64, 3)
 
     return model
 
@@ -67,7 +67,7 @@ def make_discriminator_model():
     model = tf.keras.Sequential()
     model.add(
         layers.Conv2D(
-            64, (5, 5), strides=(2, 2), padding="valid", input_shape=[128, 128, 3]
+            64, (5, 5), strides=(2, 2), padding="valid", input_shape=[64, 64, 3]
         )
     )
     model.add(layers.LeakyReLU())
@@ -166,11 +166,11 @@ def train(
             )
 
         # Produce images every 100 epochs as you go
-        if (epoch + 1) % 100 == 0:
+        if (epoch + 1) % 10 == 0:
             generate_and_save_images(generator, epoch + 1, seed, dataset)
 
         # Save the model every 100 epochs
-        if (epoch + 1) % 100 == 0:
+        if (epoch + 1) % 10 == 0:
             checkpoint.save(file_prefix=checkpoint_prefix)
 
         print("Time for epoch {} is {} sec".format(epoch + 1, time.time() - start))
@@ -207,14 +207,14 @@ def generate_and_save_images(model, epoch, test_input, dataset):
 
 def normalize(element):
     image = element['image']
-    return tf.cast(tf.image.resize(image, (128, 128)) / 255, tf.dtypes.float32)
+    return tf.cast(tf.image.resize(image, (64, 64)) / 255, tf.dtypes.float32)
 
 
 
 def main():
     
     train_dataset, info = tfds.load("celeb_a", split="train", with_info=True)
-    BATCH_SIZE = 212
+    BATCH_SIZE = 64
     BUFFER_SIZE = info.splits['train'].num_examples
     AUTOTUNE = tf.data.experimental.AUTOTUNE
 
