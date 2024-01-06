@@ -9,7 +9,7 @@ import os
 from keras import layers
 import time
 
-gan_dir = "celeb_128"
+gan_dir = "celeb_64"
 
 
 def make_generator_model():
