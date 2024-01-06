@@ -9,7 +9,7 @@ import os
 from keras import layers
 import time
 
-gan_dir = "flowers_128"
+gan_dir = "celeb_128"
 
 
 def make_generator_model():
@@ -213,7 +213,7 @@ def normalize(element):
 
 def main():
     
-    train_dataset, info = tfds.load("tf_flowers", split="train", with_info=True)
+    train_dataset, info = tfds.load("celeb_a", split="train", with_info=True)
     BATCH_SIZE = 212
     BUFFER_SIZE = info.splits['train'].num_examples
     AUTOTUNE = tf.data.experimental.AUTOTUNE
@@ -239,7 +239,7 @@ def main():
         generator=generator,
         discriminator=discriminator,
     )
-    EPOCHS = 10000
+    EPOCHS = 3000
     noise_dim = 100
     num_examples_to_generate = 16
 
