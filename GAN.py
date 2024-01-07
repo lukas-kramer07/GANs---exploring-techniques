@@ -214,7 +214,7 @@ def normalize(element):
 def main():
     
     train_dataset, info = tfds.load("celeb_a", split="train", with_info=True)
-    BATCH_SIZE = 1024
+    BATCH_SIZE = 800
     BUFFER_SIZE = info.splits['train'].num_examples
     AUTOTUNE = tf.data.experimental.AUTOTUNE
 
