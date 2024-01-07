@@ -2,8 +2,6 @@
 GAN as a custom model subclass with custom training step
 '''
 
-
-from tabnanny import check
 import tensorflow as tf
 import tensorflow_datasets as tfds
 import matplotlib.pyplot as plt
@@ -81,10 +79,6 @@ def make_discriminator_model():
     model.add(layers.LeakyReLU())
     model.add(layers.Dropout(0.3))
 
-    model.add(layers.Conv2D(128, (5, 5), strides=(2, 2), padding="valid"))
-    model.add(layers.LeakyReLU())
-    model.add(layers.Dropout(0.3))
-
     model.add(layers.Flatten())
     model.add(layers.Dense(1))
 
@@ -135,7 +129,7 @@ class GAN_Model(tf.keras.Model):
         return {"d_loss":disc_loss, "g_loss":gen_loss}
     
 
-class ModelMonitor(tf.keras.Callback):
+class ModelMonitor(tf.keras.callbacks.Callback):
     def __init__(self, test_input, checkpoint, checkpoint_prefix):
         self.checkpoint_prefix = checkpoint_prefix
         self.checkpoint = checkpoint
