@@ -14,28 +14,28 @@ gan_dir = "celeb_64"
 
 def make_generator_model():
     model = tf.keras.Sequential()
-    model.add(layers.Dense(8 * 8 * 256, use_bias=False, input_shape=(100,)))
+    model.add(layers.Dense(7 * 7 * 256, use_bias=False, input_shape=(100,)))
     model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
 
-    model.add(layers.Reshape((8, 8, 256)))
-    assert model.output_shape == (None, 8, 8, 256)  # Note: None is the batch size
+    model.add(layers.Reshape((7, 7, 256)))
+    assert model.output_shape == (None, 7, 7, 256)  # Note: None is the batch size
 
     model.add(
         layers.Conv2DTranspose(
             128, (5, 5), strides=(2, 2), padding="same", use_bias=False
         )
     )
-    assert model.output_shape == (None, 16, 16, 128)
+    assert model.output_shape == (None, 14, 14, 128)
     model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
 
     model.add(
         layers.Conv2DTranspose(
-            128, (5, 5), strides=(2, 2), padding="same", use_bias=False
+            128, (5, 5), strides=(1, 1), padding="same", use_bias=False
         )
     )
-    assert model.output_shape == (None, 32, 32, 128)
+    assert model.output_shape == (None, 14, 14, 128)
     model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
 
@@ -44,22 +44,21 @@ def make_generator_model():
             64, (5, 5), strides=(2, 2), padding="same", use_bias=False
         )
     )
-    assert model.output_shape == (None, 64, 64, 64)
+    assert model.output_shape == (None, 28, 28, 64)
     model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
 
     model.add(
         layers.Conv2DTranspose(
-            3,
+            1,
             (5, 5),
             strides=(1, 1),
             padding="same",
             use_bias=False,
-            activation="sigmoid",
+            activation="tanh",
         )
     )
-    assert model.output_shape == (None, 64, 64, 3)
-
+    assert model.output_shape == (None, 28, 28, 1)
     return model
 
 
@@ -67,13 +66,9 @@ def make_discriminator_model():
     model = tf.keras.Sequential()
     model.add(
         layers.Conv2D(
-            64, (5, 5), strides=(2, 2), padding="valid", input_shape=[64, 64, 3]
+            64, (5, 5), strides=(2, 2), padding="valid", input_shape=[28, 28, 1]
         )
     )
-    model.add(layers.LeakyReLU())
-    model.add(layers.Dropout(0.3))
-
-    model.add(layers.Conv2D(128, (5, 5), strides=(2, 2), padding="valid"))
     model.add(layers.LeakyReLU())
     model.add(layers.Dropout(0.3))
 
@@ -187,14 +182,10 @@ def generate_and_save_images(model, epoch, test_input, dataset):
     print(predictions.shape)
     _ = plt.figure(figsize=(4, 4))
 
-    for i in range(predictions.shape[0] // 2):
-        plt.subplot(4, 4, i + 1)
-        plt.imshow(tf.cast(predictions[i, :, :, :] * 255, tf.dtypes.int16))
-        plt.axis("off")
-    for i in range(8, 16):
-        plt.subplot(4, 4, i + 1)
-        plt.imshow(tf.cast(next(iter(dataset))[i] * 255, tf.dtypes.int16))
-        plt.axis("off")
+    for i in range(predictions.shape[0]):
+                plt.subplot(4, 4, i + 1)
+                plt.imshow(tf.cast(predictions[i, :, :, 0] * 127.5 +127.5, tf.dtypes.int16), cmap='gray')
+                plt.axis("off")
     os.makedirs(
         f"Gan_Tut/plots/{gan_dir}", exist_ok=True
     )  # Create the "models" folder if it doesn't exist
@@ -207,14 +198,14 @@ def generate_and_save_images(model, epoch, test_input, dataset):
 
 def normalize(element):
     image = element['image']
-    return tf.cast(tf.image.resize(image, (64, 64)) / 255, tf.dtypes.float32)
+    return tf.cast((tf.image.resize(image, (28, 28))-127.5) / 127.5, tf.dtypes.float32)
 
 
 
 def main():
     
-    train_dataset, info = tfds.load("celeb_a", split="train", with_info=True)
-    BATCH_SIZE = 800
+    train_dataset, info = tfds.load("mnist", split="train", with_info=True)
+    BATCH_SIZE = 64
     BUFFER_SIZE = info.splits['train'].num_examples
     AUTOTUNE = tf.data.experimental.AUTOTUNE
 
@@ -239,7 +230,7 @@ def main():
         generator=generator,
         discriminator=discriminator,
     )
-    EPOCHS = 3000
+    EPOCHS = 50
     noise_dim = 100
     num_examples_to_generate = 16
 
