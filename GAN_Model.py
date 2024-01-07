@@ -3,6 +3,7 @@ GAN as a custom model subclass with custom training step
 '''
 
 
+from tabnanny import check
 import tensorflow as tf
 import tensorflow_datasets as tfds
 import matplotlib.pyplot as plt
@@ -135,24 +136,30 @@ class GAN_Model(tf.keras.model):
     
 
 class ModelMonitor(tf.keras.Callback):
-    def __init__(self, test_input):
+    def __init__(self, test_input, checkpoint, checkpoint_prefix):
+        self.checkpoint_prefix = checkpoint_prefix
+        self.checkpoint = checkpoint
         self.test_input = test_input
     def on_epoch_end(self, epoch, logs=None):
         # Notice `training` is set to False.
         # This is so all layers run in inference mode (batchnorm).
-        predictions = self.model.generator(self.test_input, training=False)
-        print(predictions.shape)
-        _ = plt.figure(figsize=(4, 4))
+        if (epoch +1) % 10 == 0:
+            predictions = self.model.generator(self.test_input, training=False)
+            print(predictions.shape)
+            _ = plt.figure(figsize=(4, 4))
 
-        for i in range(predictions.shape[0]):
-            plt.subplot(4, 4, i + 1)
-            plt.imshow(tf.cast(predictions[i, :, :, :] * 255, tf.dtypes.int16))
-            plt.axis("off")
-        os.makedirs(
-            f"Gan_Tut/plots/{gan_dir}", exist_ok=True
-        )  # Create the "models" folder if it doesn't exist
-        plt.savefig(f"Gan_Tut/plots/{gan_dir}/image_at_epoch_{epoch}.png")
-        plt.close()
+            for i in range(predictions.shape[0]):
+                plt.subplot(4, 4, i + 1)
+                plt.imshow(tf.cast(predictions[i, :, :, :] * 255, tf.dtypes.int16))
+                plt.axis("off")
+            os.makedirs(
+                f"Gan_Tut/plots/{gan_dir}", exist_ok=True
+            )  # Create the "models" folder if it doesn't exist
+            plt.savefig(f"Gan_Tut/plots/{gan_dir}/image_at_epoch_{epoch}.png")
+            plt.close()
+
+            #save checkpoints
+            self.checkpoint.save(file_prefix=self.checkpoint_prefix)
 
 def normalize(element):
     image = element['image']
@@ -174,10 +181,15 @@ def main():
         .prefetch(AUTOTUNE)
     )
 
+    # build generator and discriminator
     generator = make_generator_model()
     discriminator = make_discriminator_model()
     generator_optimizer = tf.keras.optimizers.Adam(1e-4)
     discriminator_optimizer = tf.keras.optimizers.Adam(1e-4)
+    generator_loss = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+    discriminator_loss = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+
+    # establish checkpoints
     checkpoint_dir = "./training_checkpoints"
     checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
     checkpoint = tf.train.Checkpoint(
@@ -186,13 +198,16 @@ def main():
         generator=generator,
         discriminator=discriminator,
     )
-    # You will reuse this seed overtime (so it's easier)
-    # to visualize progress in the animated GIF)
+    
+    # initiate and compile model
+    GAN = GAN_Model(generator=generator, discriminator=discriminator, latent_dim=LATENT_DIM)
+    GAN.compile(g_loss=generator_loss, d_loss=discriminator_loss, g_opt=generator_optimizer, d_opt=discriminator_optimizer)
+
     seed = tf.random.normal([num_examples_to_generate, LATENT_DIM])
-    monitor = ModelMonitor(seed)
+    monitor = ModelMonitor(seed, checkpoint, checkpoint_prefix)
     #checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
     print('starte Training')
-    # history = TODO
+    history = GAN.fit(train_dataset, epochs=5, callbacks=[monitor])
 
 
 if __name__ == "__main__":
