@@ -86,3 +86,17 @@ def make_discriminator_model():
     model.add(layers.Dense(1))
 
     return model
+
+class GAN_Model(tf.keras.model):
+    def __init__(self, generator, discriminator):
+        super.__init__()
+        self.generator = generator
+        self.discriminator = discriminator
+
+    def compile(self, g_loss, d_loss, g_opt, d_opt):
+        self.g_loss = g_loss
+        self.d_loss = d_loss
+        self.g_opt = g_opt
+        self.d_opt = d_opt
+    
+    
