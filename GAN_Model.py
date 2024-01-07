@@ -131,3 +131,24 @@ class GAN_Model(tf.keras.model):
 
         return {"d_loss":disc_loss, "g_loss":gen_loss}
     
+
+class ModelMonitor(tf.keras.Callback):
+    def __init__(self, test_input, latent_dim=LATENT_DIM):
+        self.test_input = test_input
+        self.latent_dim = latent_dim
+    def on_epoch_end(self, epoch, logs=None):
+        # Notice `training` is set to False.
+        # This is so all layers run in inference mode (batchnorm).
+        predictions = self.model.generator(self.test_input, training=False)
+        print(predictions.shape)
+        _ = plt.figure(figsize=(4, 4))
+
+        for i in range(predictions.shape[0]):
+            plt.subplot(4, 4, i + 1)
+            plt.imshow(tf.cast(predictions[i, :, :, :] * 255, tf.dtypes.int16))
+            plt.axis("off")
+        os.makedirs(
+            f"Gan_Tut/plots/{gan_dir}", exist_ok=True
+        )  # Create the "models" folder if it doesn't exist
+        plt.savefig(f"Gan_Tut/plots/{gan_dir}/image_at_epoch_{epoch}.png")
+        plt.close()
