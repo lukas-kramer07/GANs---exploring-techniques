@@ -86,13 +86,13 @@ def make_discriminator_model():
 
 class GAN_Model(tf.keras.Model):
     def __init__(self, generator, discriminator, latent_dim):
-        super.__init__()
+        super().__init__()
         self.generator = generator
         self.discriminator = discriminator
         self.latent_dim = latent_dim
 
     def compile(self, g_loss, d_loss, g_opt, d_opt):
-        
+        super().compile()
         self.g_loss = g_loss
         self.d_loss = d_loss
         self.g_opt = g_opt
