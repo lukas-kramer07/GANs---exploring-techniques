@@ -90,7 +90,7 @@ def make_discriminator_model():
 
     return model
 
-class GAN_Model(tf.keras.model):
+class GAN_Model(tf.keras.Model):
     def __init__(self, generator, discriminator, latent_dim):
         super.__init__()
         self.generator = generator
