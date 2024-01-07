@@ -112,11 +112,22 @@ class GAN_Model(tf.keras.model):
             disc_fake = self.discriminator(fake_images, training=True)
 
             # Calculate discriminator loss
-            y = tf.concat(disc_real, disc_fake)
-            y_hat = tf.concat(tf.ones_like(disc_real), tf.zeros_like(disc_fake))
+            y_hat = tf.concat(disc_real, disc_fake)
+            y = tf.concat(tf.ones_like(disc_real), tf.zeros_like(disc_fake))
             
             # apply noise to real labels
-            # y_hat += 0.05*tf.random.normal(tf.shape(y_hat))
-            disc_loss = self.d_loss(y_hat, y)
+            # y += 0.05*tf.random.normal(tf.shape(y))
+            disc_loss = self.d_loss(y, y_hat)
 
             # Calculate Generator loss
+            gen_loss = self.g_loss(tf.ones_like(disc_fake), disc_fake)
+
+        # Calculate and apply gradients
+        gen_grads = gen_tape.gradient(gen_loss, self.generator.trainable_variables)
+        disc_grads = disc_tape.gradients(disc_loss, self.discriminator.trainable_variables)
+
+        self.g_opt.apply_gradients(zip(gen_grads, self.generator.trainable_variables))
+        self.d_opt.apply_gradients(zip(disc_grads, self.discriminator.trainable_variables))
+
+        return {"d_loss":disc_loss, "g_loss":gen_loss}
+    
