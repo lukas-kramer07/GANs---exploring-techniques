@@ -154,7 +154,9 @@ class ModelMonitor(tf.keras.Callback):
         plt.savefig(f"Gan_Tut/plots/{gan_dir}/image_at_epoch_{epoch}.png")
         plt.close()
 
-
+def normalize(element):
+    image = element['image']
+    return tf.cast(tf.image.resize(image, (64, 64)) / 255, tf.dtypes.float32)
 
 def main():
     
