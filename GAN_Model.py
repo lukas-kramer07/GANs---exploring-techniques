@@ -8,10 +8,12 @@ import tensorflow_datasets as tfds
 import matplotlib.pyplot as plt
 import os
 from keras import layers
-import time
 
 gan_dir = "celeb_64"
 LATENT_DIM = 100
+EPOCHS = 3000
+num_examples_to_generate = 16
+
 
 def make_generator_model():
     model = tf.keras.Sequential()
@@ -133,9 +135,8 @@ class GAN_Model(tf.keras.model):
     
 
 class ModelMonitor(tf.keras.Callback):
-    def __init__(self, test_input, latent_dim=LATENT_DIM):
+    def __init__(self, test_input):
         self.test_input = test_input
-        self.latent_dim = latent_dim
     def on_epoch_end(self, epoch, logs=None):
         # Notice `training` is set to False.
         # This is so all layers run in inference mode (batchnorm).
@@ -152,3 +153,56 @@ class ModelMonitor(tf.keras.Callback):
         )  # Create the "models" folder if it doesn't exist
         plt.savefig(f"Gan_Tut/plots/{gan_dir}/image_at_epoch_{epoch}.png")
         plt.close()
+
+
+
+def main():
+    
+    train_dataset, info = tfds.load("celeb_a", split="train", with_info=True)
+    BATCH_SIZE = 800
+    BUFFER_SIZE = info.splits['train'].num_examples
+    AUTOTUNE = tf.data.experimental.AUTOTUNE
+
+    train_dataset = (
+        train_dataset
+        .map(normalize, num_parallel_calls=AUTOTUNE)
+        .cache()
+        .shuffle(BUFFER_SIZE)
+        .batch(BATCH_SIZE)
+        .prefetch(AUTOTUNE)
+    )
+
+    generator = make_generator_model()
+    discriminator = make_discriminator_model()
+    generator_optimizer = tf.keras.optimizers.Adam(1e-4)
+    discriminator_optimizer = tf.keras.optimizers.Adam(1e-4)
+    checkpoint_dir = "./training_checkpoints"
+    checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
+    checkpoint = tf.train.Checkpoint(
+        generator_optimizer=generator_optimizer,
+        discriminator_optimizer=discriminator_optimizer,
+        generator=generator,
+        discriminator=discriminator,
+    )
+    # You will reuse this seed overtime (so it's easier)
+    # to visualize progress in the animated GIF)
+    seed = tf.random.normal([num_examples_to_generate, LATENT_DIM])
+    monitor = ModelMonitor(seed)
+    #checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
+    print('starte Training')
+    # history = TODO
+
+
+if __name__ == "__main__":
+    gpus = tf.config.list_physical_devices("GPU")
+    print(gpus)
+    if gpus:
+        # Restrict TensorFlow to only allocate 1GB of memory on the first GPU
+        try:
+            tf.config.experimental.set_memory_growth(gpus[0], True)
+            logical_gpus = tf.config.list_logical_devices("GPU")
+            print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
+        except RuntimeError as e:
+            # Virtual devices must be set before GPUs have been initialized
+            print(e)
+    main()
