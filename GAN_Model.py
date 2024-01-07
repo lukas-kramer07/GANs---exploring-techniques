@@ -14,7 +14,7 @@ gan_dir = "celeb_64"
 LATENT_DIM = 100
 EPOCHS = 3000
 num_examples_to_generate = 16
-BATCH_SIZE = 64
+BATCH_SIZE = 1024
 
 def make_generator_model():
     model = tf.keras.Sequential()
@@ -101,49 +101,34 @@ class GAN_Model(tf.keras.Model):
         self.d_opt = d_opt
     
     #1 equals real, 0 equals fake
-    @tf.function
-    def train_step(self, batch,):
-        # Get the data
+    def train_step(self, batch):
         real_images = batch
-        fake_images = self.generator(tf.random.normal((BATCH_SIZE,100,1)), training=False)
-
-        # Train the dis
-        with tf.GradientTape() as d_tape:
-            # Pass the real and fake images to the discriminator model 
-            yhat_real = self.discriminator(real_images, training=True)
-            yhat_fake = self.discriminator(fake_images, training=True)
-            yhat_realfake = tf.concat([yhat_real, yhat_fake], axis=0)
-            
-            # Create labels for real and fake images (real:0 fake:1)
-            y_realfake = tf.concat([tf.zeros_like(yhat_real), tf.ones_like(yhat_fake)], axis=0)
-
-            # Add some noise to the outputs
-            noise_real = 0.15*tf.random.uniform(tf.shape(yhat_real))
-            noise_fake = -0.15*tf.random.uniform(tf.shape(yhat_fake))
-            y_realfake += tf.concat([noise_real, noise_fake], axis=0)
-            
-            # Calculate Loss
-            total_d_loss = self.d_loss(y_realfake, yhat_realfake)
-
-        # Apply backpropagation - nn learn
-        dgrad = d_tape.gradient(total_d_loss, self.discriminator.trainable_variables)
-        self.d_opt.apply_gradients(zip(dgrad, self.discriminator.trainable_variables))
         
-        # Train the generator
-        with tf.GradientTape() as g_tape:
-            # Generate some new images
-            gen_images = self.generator(tf.random.normal((BATCH_SIZE,100,1)), training=False)
+        # meassure gradients of generator and discriminator
+        with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
+            fake_images = self.generator(tf.random.normal([tf.shape(batch)[0], self.latent_dim]), training=True)
+            disc_real = self.discriminator(real_images, training=True)
+            disc_fake = self.discriminator(fake_images, training=True)
 
-            # Create the predicted labels
-            predicted_labels = self.discriminator(gen_images, training=False)
+            # Calculate discriminator loss
+            y_hat = tf.concat([disc_real, disc_fake], axis=0)
+            y = tf.concat([tf.ones_like(disc_real), tf.zeros_like(disc_fake)], axis = 0)
             
-            # Calculate loss
-            total_g_loss = self.g_loss(tf.zeros_like(predicted_labels), predicted_labels)
-        # Apply backprop
-        ggrad = g_tape.gradient(total_g_loss, self.generator.trainable_variables)
-        self.g_opt.apply_gradients(zip(ggrad, self.generator.trainable_variables))
+            # apply noise to real labels
+            # y += 0.05*tf.random.normal(tf.shape(y))
+            disc_loss = self.d_loss(y, y_hat)
 
-        return {"d_loss":total_d_loss, "g_loss":total_g_loss}
+            # Calculate Generator loss
+            gen_loss = self.g_loss(tf.ones_like(disc_fake), disc_fake)
+
+        # Calculate and apply gradients
+        gen_grads = gen_tape.gradient(gen_loss, self.generator.trainable_variables)
+        disc_grads = disc_tape.gradient(disc_loss, self.discriminator.trainable_variables)
+
+        self.g_opt.apply_gradients(zip(gen_grads, self.generator.trainable_variables))
+        self.d_opt.apply_gradients(zip(disc_grads, self.discriminator.trainable_variables))
+
+        return {"d_loss":disc_loss, "g_loss":gen_loss}
 
     
 
@@ -157,7 +142,6 @@ class ModelMonitor(tf.keras.callbacks.Callback):
         # This is so all layers run in inference mode (batchnorm).
         if (epoch +1) % 10 == 0:
             predictions = self.model.generator(self.test_input, training=False)
-            print(predictions.shape)
             _ = plt.figure(figsize=(4, 4))
 
             for i in range(predictions.shape[0]):
@@ -165,9 +149,9 @@ class ModelMonitor(tf.keras.callbacks.Callback):
                 plt.imshow(tf.cast(predictions[i, :, :, 0] * 127.5 +127.5, tf.dtypes.int16), cmap='gray')
                 plt.axis("off")
             os.makedirs(
-                f"images/plots/{gan_dir}", exist_ok=True
+                f"Gan_Tut/plots/{gan_dir}", exist_ok=True
             )  # Create the "models" folder if it doesn't exist
-            plt.savefig(f"images/plots/{gan_dir}/image_at_epoch_{epoch}.png")
+            plt.savefig(f"Gan_Tut/plots/{gan_dir}/image_at_epoch_{epoch}.png")
             plt.close()
 
             #save checkpoints
@@ -219,7 +203,7 @@ def main():
     monitor = ModelMonitor(seed, checkpoint, checkpoint_prefix)
     #checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
     print('starte Training')
-    history = GAN.fit(train_dataset, epochs=50, callbacks=[monitor])
+    history = GAN.fit(train_dataset, epochs=EPOCHS, callbacks=[monitor])
 
 
 if __name__ == "__main__":
