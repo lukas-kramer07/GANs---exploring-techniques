@@ -11,11 +11,11 @@ from keras import layers
 import time
 
 gan_dir = "celeb_64"
-
+LATENT_DIM = 100
 
 def make_generator_model():
     model = tf.keras.Sequential()
-    model.add(layers.Dense(8 * 8 * 256, use_bias=False, input_shape=(100,)))
+    model.add(layers.Dense(8 * 8 * 256, use_bias=False, input_shape=(LATENT_DIM,)))
     model.add(layers.BatchNormalization())
     model.add(layers.LeakyReLU())
 
@@ -88,15 +88,35 @@ def make_discriminator_model():
     return model
 
 class GAN_Model(tf.keras.model):
-    def __init__(self, generator, discriminator):
+    def __init__(self, generator, discriminator, latent_dim):
         super.__init__()
         self.generator = generator
         self.discriminator = discriminator
+        self.latent_dim = latent_dim
 
     def compile(self, g_loss, d_loss, g_opt, d_opt):
+        
         self.g_loss = g_loss
         self.d_loss = d_loss
         self.g_opt = g_opt
         self.d_opt = d_opt
     
-    
+    #1 equals real, 0 equals fake
+    def train_step(self, batch):
+        real_images = batch
+        fake_images = self.generator(tf.random.normal([self.batch_size, self.latent_dim]), training=True)
+
+        # meassure gradients of generator and discriminator
+        with tf.GradientTape() as gen_tape, tf.GradientTape as disc_tape:
+            disc_real = self.discriminator(real_images, training=True)
+            disc_fake = self.discriminator(fake_images, training=True)
+
+            # Calculate discriminator loss
+            y = tf.concat(disc_real, disc_fake)
+            y_hat = tf.concat(tf.ones_like(disc_real), tf.zeros_like(disc_fake))
+            
+            # apply noise to real labels
+            # y_hat += 0.05*tf.random.normal(tf.shape(y_hat))
+            disc_loss = self.d_loss(y_hat, y)
+
+            # Calculate Generator loss
