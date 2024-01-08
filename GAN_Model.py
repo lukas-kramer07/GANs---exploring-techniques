@@ -6,15 +6,14 @@ import tensorflow as tf
 import tensorflow_datasets as tfds
 import matplotlib.pyplot as plt
 import os
-import numpy as np
 from keras import layers
 from keras.losses import BinaryCrossentropy
 
-gan_dir = "celeb_64"
+gan_dir = "num_28"
 LATENT_DIM = 100
 EPOCHS = 3000
 num_examples_to_generate = 16
-BATCH_SIZE = 1024
+BATCH_SIZE = 512
 
 def make_generator_model():
     model = tf.keras.Sequential()
@@ -28,15 +27,6 @@ def make_generator_model():
     model.add(
         layers.Conv2DTranspose(
             128, (5, 5), strides=(2, 2), padding="same", use_bias=False
-        )
-    )
-    assert model.output_shape == (None, 14, 14, 128)
-    model.add(layers.BatchNormalization())
-    model.add(layers.LeakyReLU())
-
-    model.add(
-        layers.Conv2DTranspose(
-            128, (5, 5), strides=(1, 1), padding="same", use_bias=False
         )
     )
     assert model.output_shape == (None, 14, 14, 128)
@@ -115,7 +105,7 @@ class GAN_Model(tf.keras.Model):
             y = tf.concat([tf.ones_like(disc_real), tf.zeros_like(disc_fake)], axis = 0)
             
             # apply noise to real labels
-            # y += 0.05*tf.random.normal(tf.shape(y))
+            y += 0.05*tf.random.normal(tf.shape(y))
             disc_loss = self.d_loss(y, y_hat)
 
             # Calculate Generator loss
@@ -151,7 +141,7 @@ class ModelMonitor(tf.keras.callbacks.Callback):
             os.makedirs(
                 f"Gan_Tut/plots/{gan_dir}", exist_ok=True
             )  # Create the "models" folder if it doesn't exist
-            plt.savefig(f"Gan_Tut/plots/{gan_dir}/image_at_epoch_{epoch}.png")
+            plt.savefig(f"Gan_Tut/plots/{gan_dir}/image_at_epoch_{epoch+1}.png")
             plt.close()
 
             #save checkpoints
