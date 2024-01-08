@@ -11,7 +11,7 @@ from keras.losses import BinaryCrossentropy
 
 gan_dir = "num_28"
 LATENT_DIM = 128
-EPOCHS = 3000
+EPOCHS = 10000
 num_examples_to_generate = 16
 BATCH_SIZE = 512
 
@@ -171,7 +171,7 @@ def main():
 
     seed = tf.random.normal([num_examples_to_generate, LATENT_DIM])
     monitor = ModelMonitor(seed, checkpoint, checkpoint_prefix)
-    #checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
+    checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
     print('starte Training')
     history = GAN.fit(train_dataset, epochs=EPOCHS, callbacks=[monitor])
 
