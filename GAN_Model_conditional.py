@@ -15,30 +15,36 @@ EPOCHS = 10000
 num_examples_to_generate = 16
 BATCH_SIZE = 512
 
-def make_generator_model():
-    model = tf.keras.Sequential()
-    model.add(layers.Dense(7*7*256, use_bias=False, input_shape=(LATENT_DIM,)))
-    model.add(layers.BatchNormalization())
-    model.add(layers.LeakyReLU())
+def make_generator_model(latent_dim=LATENT_DIM, classes=10):
 
-    model.add(layers.Reshape((7, 7, 256)))
-    assert model.output_shape == (None, 7, 7, 256)  # Note: None is the batch size
+    input_latent = layers.Input(shape=latent_dim)
+    lat= layers.Dense(7*7*128, use_bias=False)(input_latent)
+    lat= layers.BatchNormalization()(lat)
+    lat= layers.LeakyReLU()(lat)
+    lat= layers.Reshape((7, 7, 128))(lat)
 
-    model.add(layers.Conv2DTranspose(128, (5, 5), strides=(1, 1), padding='same', use_bias=False))
-    assert model.output_shape == (None, 7, 7, 128)
-    model.add(layers.BatchNormalization())
-    model.add(layers.LeakyReLU())
+    input_label = layers.Input(shape=(1,))
+    il = layers.Embedding(classes, 50)(input_label)
+    il = layers.Dense(7*7)(il)
+    il = layers.Reshape((7, 7,1))(il)
 
-    model.add(layers.Conv2DTranspose(64, (5, 5), strides=(2, 2), padding='same', use_bias=False))
-    assert model.output_shape == (None, 14, 14, 64)
-    model.add(layers.BatchNormalization())
-    model.add(layers.LeakyReLU())
+    merge = layers.Concatenate()([lat, il])
+    #assert merge.shape == (None, 7, 7, 129)  # Note: None is the batch size
 
-    model.add(layers.Conv2DTranspose(1, (5, 5), strides=(2, 2), padding='same', use_bias=False, activation='tanh'))
-    assert model.output_shape == (None, 28, 28, 1)
+    x= layers.Conv2DTranspose(128, (5, 5), strides=(1, 1), padding='same', use_bias=False)(merge)
+    #assert x.shape == (None, 7, 7, 128)
+    x= layers.BatchNormalization()
+    x= layers.LeakyReLU()
 
+    x= layers.Conv2DTranspose(64, (5, 5), strides=(2, 2), padding='same', use_bias=False)(x)
+    #assert x.shape == (None, 14, 14, 128)
+    x= layers.BatchNormalization()(x)
+    x= layers.LeakyReLU()(x)
+
+    output= layers.Conv2DTranspose(1, (5, 5), strides=(2, 2), padding='same', use_bias=False, activation='tanh')(x)
+
+    model = Model([input_latent, input_label], output)
     return model
-
 
 
 def make_discriminator_model(in_shape = (28,28,1), classes=10):
