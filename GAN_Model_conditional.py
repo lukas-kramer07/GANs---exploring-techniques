@@ -12,7 +12,7 @@ import numpy as np
 
 gan_dir = "num_28"
 LATENT_DIM = 128
-EPOCHS = 10000
+EPOCHS = 500
 num_examples_to_generate = 16
 BATCH_SIZE = 512
 
@@ -89,10 +89,11 @@ class GAN_Model(tf.keras.Model):
     #1 equals real, 0 equals fake
     def train_step(self, batch):
         (real_images, labels) = batch
-        
+        print(tf.shape(labels)[0])
         # meassure gradients of generator and discriminator
         with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
-            fake_images = self.generator(tf.random.normal([[tf.shape(batch)[0], self.latent_dim], labels]), training=True)
+            
+            fake_images = self.generator([tf.cast(tf.random.normal([tf.shape(labels)[0], self.latent_dim]), dtype=tf.float32), labels], training=True)
             disc_real = self.discriminator([real_images, labels], training=True)
             disc_fake = self.discriminator([fake_images, labels], training=True)
 
