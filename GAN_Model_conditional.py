@@ -34,8 +34,8 @@ def make_generator_model(latent_dim=LATENT_DIM, classes=10):
 
     x= layers.Conv2DTranspose(128, (5, 5), strides=(1, 1), padding='same', use_bias=False)(merge)
     #assert x.shape == (None, 7, 7, 128)
-    x= layers.BatchNormalization()
-    x= layers.LeakyReLU()
+    x= layers.BatchNormalization()(x)
+    x= layers.LeakyReLU()(x)
 
     x= layers.Conv2DTranspose(64, (5, 5), strides=(2, 2), padding='same', use_bias=False)(x)
     #assert x.shape == (None, 14, 14, 128)
