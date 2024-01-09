@@ -6,7 +6,7 @@ import tensorflow as tf
 import tensorflow_datasets as tfds
 import matplotlib.pyplot as plt
 import os
-from keras import layers
+from keras import layers, Model
 from keras.losses import BinaryCrossentropy
 
 gan_dir = "num_28"
@@ -40,20 +40,29 @@ def make_generator_model():
     return model
 
 
-def make_discriminator_model():
-    model = tf.keras.Sequential()
-    model.add(layers.Conv2D(64, (5, 5), strides=(2, 2), padding='same',
-                                     input_shape=[28, 28, 1]))
-    model.add(layers.LeakyReLU())
-    model.add(layers.Dropout(0.3))
 
-    model.add(layers.Conv2D(128, (5, 5), strides=(2, 2), padding='same'))
-    model.add(layers.LeakyReLU())
-    model.add(layers.Dropout(0.3))
+def make_discriminator_model(in_shape = (28,28,1), classes=10):
+    input_label = layers.Input(shape=(1,))
+    il = layers.Embedding(classes, 50)(input_label)
+    il = layers.Dense(in_shape[0]*in_shape[1])(il)
+    il = layers.Reshape((in_shape[0], in_shape[1],1))(il)
 
-    model.add(layers.Flatten())
-    model.add(layers.Dense(1))
+    input_image = layers.Input(shape=in_shape)   
 
+    merge = layers.Concatenate()([input_image, il])
+
+    x = layers.Conv2D(64, (5, 5), strides=(2, 2), padding='same')(merge)
+    x = layers.LeakyReLU()(x)
+    x = layers.Dropout(0.3)(x)
+
+    x = layers.Conv2D(128, (5, 5), strides=(2, 2), padding='same')(x)
+    x = layers.LeakyReLU()(x)
+    x = layers.Dropout(0.3)(x)
+
+    x = layers.Flatten()(x)
+    output = layers.Dense(1)(x)
+
+    model = Model([input_image, input_label], output)
     return model
 
 class GAN_Model(tf.keras.Model):
@@ -128,8 +137,8 @@ class ModelMonitor(tf.keras.callbacks.Callback):
             self.checkpoint.save(file_prefix=self.checkpoint_prefix)
 
 def normalize(element):
-    image = element['image']
-    return tf.cast((tf.image.resize(image, (28, 28))-127.5) / 127.5, tf.dtypes.float32)
+    image,label = element['image'], element['label']
+    return tf.cast((tf.image.resize(image, (28, 28))-127.5) / 127.5, tf.dtypes.float32), label
 
 def main():
     
