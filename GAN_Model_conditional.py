@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import os
 from keras import layers, Model
 from keras.losses import BinaryCrossentropy
+import numpy as np
 
 gan_dir = "num_28"
 LATENT_DIM = 128
@@ -87,13 +88,13 @@ class GAN_Model(tf.keras.Model):
     
     #1 equals real, 0 equals fake
     def train_step(self, batch):
-        real_images = batch
+        (real_images, labels) = batch
         
         # meassure gradients of generator and discriminator
         with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
-            fake_images = self.generator(tf.random.normal([tf.shape(batch)[0], self.latent_dim]), training=True)
-            disc_real = self.discriminator(real_images, training=True)
-            disc_fake = self.discriminator(fake_images, training=True)
+            fake_images = self.generator(tf.random.normal([[tf.shape(batch)[0], self.latent_dim], labels]), training=True)
+            disc_real = self.discriminator([real_images, labels], training=True)
+            disc_fake = self.discriminator([fake_images, labels], training=True)
 
             # Calculate discriminator loss
             y_hat = tf.concat([disc_real, disc_fake], axis=0)
@@ -118,7 +119,8 @@ class GAN_Model(tf.keras.Model):
     
 
 class ModelMonitor(tf.keras.callbacks.Callback):
-    def __init__(self, test_input, checkpoint, checkpoint_prefix):
+    def __init__(self, test_input, test_labels, checkpoint, checkpoint_prefix):
+        self.labels = test_labels
         self.checkpoint_prefix = checkpoint_prefix
         self.checkpoint = checkpoint
         self.test_input = test_input
@@ -126,7 +128,7 @@ class ModelMonitor(tf.keras.callbacks.Callback):
         # Notice `training` is set to False.
         # This is so all layers run in inference mode (batchnorm).
         if (epoch +1) % 10 == 0:
-            predictions = self.model.generator(self.test_input, training=False)
+            predictions = self.model.generator(self.test_input, self.labels, training=False)
             _ = plt.figure(figsize=(4, 4))
 
             for i in range(predictions.shape[0]):
@@ -185,7 +187,8 @@ def main():
     GAN.compile(g_loss=generator_loss, d_loss=discriminator_loss, g_opt=generator_optimizer, d_opt=discriminator_optimizer)
 
     seed = tf.random.normal([num_examples_to_generate, LATENT_DIM])
-    monitor = ModelMonitor(seed, checkpoint, checkpoint_prefix)
+    test_labels = np.random.randint(0, 10, size=(16, 1))
+    monitor = ModelMonitor(seed,test_labels, checkpoint, checkpoint_prefix)
     checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
     print('starte Training')
     history = GAN.fit(train_dataset, epochs=EPOCHS, callbacks=[monitor])
