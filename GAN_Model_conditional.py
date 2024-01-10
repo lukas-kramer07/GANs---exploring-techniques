@@ -8,11 +8,10 @@ import matplotlib.pyplot as plt
 import os
 from keras import layers, Model
 from keras.losses import BinaryCrossentropy
-import numpy as np
 
 gan_dir = "num_28"
 LATENT_DIM = 128
-EPOCHS = 500
+EPOCHS = 10000
 num_examples_to_generate = 16
 BATCH_SIZE = 512
 
@@ -128,8 +127,8 @@ class ModelMonitor(tf.keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs=None):
         # Notice `training` is set to False.
         # This is so all layers run in inference mode (batchnorm).
-        if (epoch +1) % 10 == 0:
-            predictions = self.model.generator(self.test_input, self.labels, training=False)
+        if (epoch+1) % 50 == 0:
+            predictions = self.model.generator([self.test_input, self.labels], training=False)
             _ = plt.figure(figsize=(4, 4))
 
             for i in range(predictions.shape[0]):
@@ -188,12 +187,16 @@ def main():
     GAN.compile(g_loss=generator_loss, d_loss=discriminator_loss, g_opt=generator_optimizer, d_opt=discriminator_optimizer)
 
     seed = tf.random.normal([num_examples_to_generate, LATENT_DIM])
-    test_labels = np.random.randint(0, 10, size=(16, 1))
+    test_labels = tf.constant([[0], [1], [2],[3],[4],[5],[6],[7],[8],[9],[0],[1],[2],[3],[4],[5]])#np.random.randint(0, 10, size=(16, 1))
     monitor = ModelMonitor(seed,test_labels, checkpoint, checkpoint_prefix)
-    checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
+    #checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
     print('starte Training')
     history = GAN.fit(train_dataset, epochs=EPOCHS, callbacks=[monitor])
-
+    plt.plot(history.history['d_loss'], label='Discriminator_loss')
+    plt.plot(history.history['g_loss'], label='Generator_loss')
+    plt.legend()
+    plt.savefig('Gan_Tut/plots/num_28/Loss')
+    plt.show()
 
 if __name__ == "__main__":
     gpus = tf.config.list_physical_devices("GPU")
