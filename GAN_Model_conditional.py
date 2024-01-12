@@ -119,15 +119,14 @@ class GAN_Model(tf.keras.Model):
     
 
 class ModelMonitor(tf.keras.callbacks.Callback):
-    def __init__(self, test_input, test_labels, checkpoint, checkpoint_prefix):
+    def __init__(self, test_input, test_labels, gan_dir):
+        self.gan_dir = gan_dir
         self.labels = test_labels
-        self.checkpoint_prefix = checkpoint_prefix
-        self.checkpoint = checkpoint
         self.test_input = test_input
     def on_epoch_end(self, epoch, logs=None):
         # Notice `training` is set to False.
         # This is so all layers run in inference mode (batchnorm).
-        if (epoch+1) % 50 == 0:
+        if (epoch+1) % 100 == 0:
             predictions = self.model.generator([self.test_input, self.labels], training=False)
             _ = plt.figure(figsize=(4, 4))
 
@@ -136,13 +135,16 @@ class ModelMonitor(tf.keras.callbacks.Callback):
                 plt.imshow(tf.cast(predictions[i, :, :, 0] * 127.5 +127.5, tf.dtypes.int16), cmap='gray')
                 plt.axis("off")
             os.makedirs(
-                f"Gan_Tut/plots/{gan_dir}", exist_ok=True
+                f"Gan_Tut/plots/{self.gan_dir}", exist_ok=True
             )  # Create the "models" folder if it doesn't exist
-            plt.savefig(f"Gan_Tut/plots/{gan_dir}/image_at_epoch_{epoch+1}.png")
+            plt.savefig(f"Gan_Tut/plots/{self.gan_dir}/image_at_epoch_{epoch+1}.png")
             plt.close()
 
-            #save checkpoints
-            self.checkpoint.save(file_prefix=self.checkpoint_prefix)
+            #save model
+            os.makedirs(
+                f"training_checkpoints/{self.gan_dir}/", exist_ok=True
+            )  # Create the "models" folder if it doesn't exist
+            self.model.generator.save(f'training_checkpoints/{self.gan_dir}/model.keras')
 
 def normalize(element):
     image,label = element['image'], element['label']
@@ -172,15 +174,6 @@ def main():
     generator_loss = BinaryCrossentropy()
     discriminator_loss = BinaryCrossentropy()
 
-    # establish checkpoints
-    checkpoint_dir = "./training_checkpoints"
-    checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
-    checkpoint = tf.train.Checkpoint(
-        generator_optimizer=generator_optimizer,
-        discriminator_optimizer=discriminator_optimizer,
-        generator=generator,
-        discriminator=discriminator,
-    )
     
     # initiate and compile model
     GAN = GAN_Model(generator=generator, discriminator=discriminator, latent_dim=LATENT_DIM)
@@ -188,8 +181,8 @@ def main():
 
     seed = tf.random.normal([num_examples_to_generate, LATENT_DIM])
     test_labels = tf.constant([[0], [1], [2],[3],[4],[5],[6],[7],[8],[9],[0],[1],[2],[3],[4],[5]])#np.random.randint(0, 10, size=(16, 1))
-    monitor = ModelMonitor(seed,test_labels, checkpoint, checkpoint_prefix)
-    #checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
+    monitor = ModelMonitor(seed,test_labels, gan_dir)
+
     print('starte Training')
     history = GAN.fit(train_dataset, epochs=EPOCHS, callbacks=[monitor])
     plt.plot(history.history['d_loss'], label='Discriminator_loss')
