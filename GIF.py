@@ -1,6 +1,6 @@
 import glob
 import imageio.v2 as imageio
-gan_dir = 'birs_64'
+gan_dir = 'num_28'
 
 anim_file = f'Gan_Tut/plots/{gan_dir}/gif.gif'
 with imageio.get_writer(anim_file, mode='I') as writer:
