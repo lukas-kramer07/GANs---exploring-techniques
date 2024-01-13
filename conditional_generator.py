@@ -2,19 +2,19 @@ import tensorflow as tf
 import keras
 import matplotlib.pyplot as plt
 from GAN_Model_conditional import LATENT_DIM
-gan_dir = "num_28"
+gan_dir = "fashion_28"
 num_examples_to_generate = 16
 classes = {
-    '0' : 0,
-    '1' : 1,
-    '2' : 2,
-    '3' : 3,
-    '4' : 4,
-    '5' : 5,
-    '6' : 6,
-    '7' : 7,
-    '8' : 8,
-    '9' : 9
+    'T-shirt/Top' : 0,
+    'Trouser' : 1,
+    'Pullover' : 2,
+    'Dress' : 3,
+    'Coat' : 4,
+    'Sandal' : 5,
+    'Shirt' : 6,
+    'Sneaker' : 7,
+    'Bag' : 8,
+    'Ankle boot' : 9
 }
 def predict(label, seed):
     labels = tf.expand_dims(tf.convert_to_tensor([label] * num_examples_to_generate), axis=-1)
@@ -34,7 +34,7 @@ def main():
     if user_input.isdigit():
         if user_input in classes:
             predict(classes[user_input], seed)
-        elif int(user_input) in classes.vlaues():
+        elif int(user_input) in classes.values():
             predict(int(user_input), seed)
         else: 
             print('error')
@@ -44,7 +44,7 @@ def main():
         else:
             print('error')
     again = input('try again?')
-    if  again.lower() == 'true' or again == '1' or again.lower() == 'yes':
+    if  again.lower() == 'true' or again == '1' or again.lower() == 'yes' or again.lower() == 'y':
         main()
 
 if __name__ == "__main__":
