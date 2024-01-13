@@ -9,7 +9,7 @@ import os
 from keras import layers, Model
 from keras.losses import BinaryCrossentropy
 
-gan_dir = "num_28"
+gan_dir = "cifar_32"
 LATENT_DIM = 128
 EPOCHS = 10000
 num_examples_to_generate = 16
@@ -18,15 +18,15 @@ BATCH_SIZE = 512
 def make_generator_model(latent_dim=LATENT_DIM, classes=10):
 
     input_latent = layers.Input(shape=latent_dim)
-    lat= layers.Dense(7*7*128, use_bias=False)(input_latent)
+    lat= layers.Dense(8*8*128, use_bias=False)(input_latent)
     lat= layers.BatchNormalization()(lat)
     lat= layers.LeakyReLU()(lat)
-    lat= layers.Reshape((7, 7, 128))(lat)
+    lat= layers.Reshape((8, 8, 128))(lat)
 
     input_label = layers.Input(shape=(1,))
     il = layers.Embedding(classes, 50)(input_label)
-    il = layers.Dense(7*7)(il)
-    il = layers.Reshape((7, 7,1))(il)
+    il = layers.Dense(8*8)(il)
+    il = layers.Reshape((8, 8,1))(il)
 
     merge = layers.Concatenate()([lat, il])
     #assert merge.shape == (None, 7, 7, 129)  # Note: None is the batch size
@@ -41,13 +41,13 @@ def make_generator_model(latent_dim=LATENT_DIM, classes=10):
     x= layers.BatchNormalization()(x)
     x= layers.LeakyReLU()(x)
 
-    output= layers.Conv2DTranspose(1, (5, 5), strides=(2, 2), padding='same', use_bias=False, activation='tanh')(x)
+    output= layers.Conv2DTranspose(3, (5, 5), strides=(2, 2), padding='same', use_bias=False, activation='tanh')(x)
 
     model = Model([input_latent, input_label], output)
     return model
 
 
-def make_discriminator_model(in_shape = (28,28,1), classes=10):
+def make_discriminator_model(in_shape = (32,32,3), classes=10):
     input_label = layers.Input(shape=(1,))
     il = layers.Embedding(classes, 50)(input_label)
     il = layers.Dense(in_shape[0]*in_shape[1])(il)
@@ -132,7 +132,7 @@ class ModelMonitor(tf.keras.callbacks.Callback):
 
             for i in range(predictions.shape[0]):
                 plt.subplot(4, 4, i + 1)
-                plt.imshow(tf.cast(predictions[i, :, :, 0] * 127.5 +127.5, tf.dtypes.int16), cmap='gray')
+                plt.imshow(tf.cast(predictions[i, :, :, :] * 127.5 +127.5, tf.dtypes.int16))
                 plt.axis("off")
             os.makedirs(
                 f"Gan_Tut/plots/{self.gan_dir}", exist_ok=True
@@ -152,7 +152,7 @@ def normalize(element):
 
 def main():
     
-    train_dataset, info = tfds.load("mnist", split="train", with_info=True)
+    train_dataset, info = tfds.load("cifar10", split="train", with_info=True)
 
     BUFFER_SIZE = info.splits['train'].num_examples
     AUTOTUNE = tf.data.experimental.AUTOTUNE
