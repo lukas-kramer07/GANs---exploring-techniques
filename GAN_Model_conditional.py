@@ -148,7 +148,7 @@ class ModelMonitor(tf.keras.callbacks.Callback):
 
 def normalize(element):
     image,label = element['image'], element['label']
-    return tf.cast((tf.image.resize(image, (28, 28))-127.5) / 127.5, tf.dtypes.float32), label
+    return tf.cast((tf.image.resize(image, (32, 32))-127.5) / 127.5, tf.dtypes.float32), label
 
 def main():
     
