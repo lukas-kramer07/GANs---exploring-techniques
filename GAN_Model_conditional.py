@@ -88,7 +88,6 @@ class GAN_Model(tf.keras.Model):
     #1 equals real, 0 equals fake
     def train_step(self, batch):
         (real_images, labels) = batch
-        print(tf.shape(labels)[0])
         # meassure gradients of generator and discriminator
         with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
             
