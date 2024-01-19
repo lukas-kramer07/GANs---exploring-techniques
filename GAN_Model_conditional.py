@@ -10,7 +10,7 @@ import keras
 from keras import layers, Model
 from keras.losses import BinaryCrossentropy
 
-gan_dir = "cifar_32"
+gan_dir = "flowers_256"
 LATENT_DIM = 100
 EPOCHS = 1000
 num_examples_to_generate = 16
@@ -179,8 +179,8 @@ def main():
     # build generator and discriminator
     generator = make_generator_model()
     discriminator = make_discriminator_model()
-    generator_optimizer = tf.keras.optimizers.Adam(1e-4)
-    discriminator_optimizer = tf.keras.optimizers.Adam(1e-4)
+    generator_optimizer = tf.keras.optimizers.Adam(1e-5)
+    discriminator_optimizer = tf.keras.optimizers.Adam(1e-5)
     generator_loss = BinaryCrossentropy()
     discriminator_loss = BinaryCrossentropy()
 
@@ -190,7 +190,7 @@ def main():
     GAN.compile(g_loss=generator_loss, d_loss=discriminator_loss, g_opt=generator_optimizer, d_opt=discriminator_optimizer)
 
     seed = tf.random.normal([num_examples_to_generate, LATENT_DIM])
-    test_labels = tf.constant([[0], [1], [2],[3],[4],[5],[6],[7],[8],[9],[0],[1],[2],[3],[4],[5]])#np.random.randint(0, 10, size=(16, 1))
+    test_labels = tf.constant([[0], [1], [2],[3],[4],[0], [1], [2],[3],[4],[0],[1],[2],[3],[4],[0]])#np.random.randint(0, 10, size=(16, 1))
     monitor = ModelMonitor(seed,test_labels, gan_dir)
 
     print('starte Training')
@@ -198,7 +198,7 @@ def main():
     plt.plot(history.history['d_loss'], label='Discriminator_loss')
     plt.plot(history.history['g_loss'], label='Generator_loss')
     plt.legend()
-    plt.savefig('Gan_Tut/plots/num_28/Loss')
+    plt.savefig(f'Gan_Tut/plots/{gan_dir}/Loss')
     plt.show()
 
 if __name__ == "__main__":
