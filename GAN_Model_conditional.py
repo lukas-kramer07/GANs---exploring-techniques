@@ -6,6 +6,7 @@ import tensorflow as tf
 import tensorflow_datasets as tfds
 import matplotlib.pyplot as plt
 import os
+import keras
 from keras import layers, Model
 from keras.losses import BinaryCrossentropy
 
@@ -15,18 +16,18 @@ EPOCHS = 10000
 num_examples_to_generate = 16
 BATCH_SIZE = 512
 
-def make_generator_model(latent_dim=LATENT_DIM, classes=10):
+def make_generator_model(latent_dim=LATENT_DIM, classes=5):
 
     input_latent = layers.Input(shape=latent_dim)
-    lat= layers.Dense(8*8*128, use_bias=False)(input_latent)
+    lat= layers.Dense(64*64*128, use_bias=False)(input_latent)
     lat= layers.BatchNormalization()(lat)
     lat= layers.LeakyReLU()(lat)
-    lat= layers.Reshape((8, 8, 128))(lat)
+    lat= layers.Reshape((64, 64, 128))(lat)
 
     input_label = layers.Input(shape=(1,))
     il = layers.Embedding(classes, 50)(input_label)
-    il = layers.Dense(8*8)(il)
-    il = layers.Reshape((8, 8,1))(il)
+    il = layers.Dense(64*64)(il)
+    il = layers.Reshape((64, 64,1))(il)
 
     merge = layers.Concatenate()([lat, il])
     #assert merge.shape == (None, 7, 7, 129)  # Note: None is the batch size
@@ -47,7 +48,7 @@ def make_generator_model(latent_dim=LATENT_DIM, classes=10):
     return model
 
 
-def make_discriminator_model(in_shape = (32,32,3), classes=10):
+def make_discriminator_model(in_shape = (256,256,3), classes=5):
     input_label = layers.Input(shape=(1,))
     il = layers.Embedding(classes, 50)(input_label)
     il = layers.Dense(in_shape[0]*in_shape[1])(il)
@@ -147,13 +148,22 @@ class ModelMonitor(tf.keras.callbacks.Callback):
 
 def normalize(element):
     image,label = element['image'], element['label']
-    return tf.cast((tf.image.resize(image, (32, 32))-127.5) / 127.5, tf.dtypes.float32), label
+    return tf.cast((tf.image.resize(image, (256, 356))-127.5) / 127.5, tf.dtypes.float32), label
 
 def main():
     
-    train_dataset, info = tfds.load("cifar10", split="train", with_info=True)
-
-    BUFFER_SIZE = info.splits['train'].num_examples
+    train_dataset = keras.utils.image_dataset_from_directory(
+    "/home/lukas/Code/Dataset_Flower/flowers",
+    labels='inferred',
+    label_mode='int',
+    class_names=None,
+    color_mode='rgb',
+    image_size=(256, 256),
+    interpolation='bilinear',
+    follow_links=False,
+    crop_to_aspect_ratio=True
+)
+    BUFFER_SIZE = 5000
     AUTOTUNE = tf.data.experimental.AUTOTUNE
 
     train_dataset = (
