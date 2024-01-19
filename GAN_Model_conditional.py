@@ -146,9 +146,9 @@ class ModelMonitor(tf.keras.callbacks.Callback):
             )  # Create the "models" folder if it doesn't exist
             self.model.generator.save(f'training_checkpoints/{self.gan_dir}/model.keras')
 
-def normalize(element):
-    image,label = element['image'], element['label']
-    return tf.cast((tf.image.resize(image, (256, 356))-127.5) / 127.5, tf.dtypes.float32), label
+def normalize(image, label):
+    #image,label = element['image'], element['label']
+    return tf.cast((tf.image.resize(image, (256, 256))-127.5) / 127.5, tf.dtypes.float32), label
 
 def main():
     
@@ -161,7 +161,8 @@ def main():
     image_size=(256, 256),
     interpolation='bilinear',
     follow_links=False,
-    crop_to_aspect_ratio=True
+    crop_to_aspect_ratio=True,
+    batch_size = None
 )
     BUFFER_SIZE = 5000
     AUTOTUNE = tf.data.experimental.AUTOTUNE
