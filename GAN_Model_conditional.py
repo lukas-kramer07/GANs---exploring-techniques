@@ -11,18 +11,18 @@ from keras import layers, Model
 from keras.losses import BinaryCrossentropy
 
 gan_dir = "cifar_32"
-LATENT_DIM = 128
-EPOCHS = 10000
+LATENT_DIM = 100
+EPOCHS = 1000
 num_examples_to_generate = 16
-BATCH_SIZE = 512
+BATCH_SIZE = 64
 
 def make_generator_model(latent_dim=LATENT_DIM, classes=5):
 
     input_latent = layers.Input(shape=latent_dim)
-    lat= layers.Dense(64*64*128, use_bias=False)(input_latent)
+    lat= layers.Dense(64*64*latent_dim, use_bias=False)(input_latent)
     lat= layers.BatchNormalization()(lat)
     lat= layers.LeakyReLU()(lat)
-    lat= layers.Reshape((64, 64, 128))(lat)
+    lat= layers.Reshape((64, 64, latent_dim))(lat)
 
     input_label = layers.Input(shape=(1,))
     il = layers.Embedding(classes, 50)(input_label)
