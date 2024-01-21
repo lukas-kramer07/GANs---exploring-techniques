@@ -126,7 +126,7 @@ class ModelMonitor(tf.keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs=None):
         # Notice `training` is set to False.
         # This is so all layers run in inference mode (batchnorm).
-        if (epoch+1) % 100 == 0:
+        if (epoch+1) % 50 == 0:
             predictions = self.model.generator([self.test_input, self.labels], training=False)
             _ = plt.figure(figsize=(4, 4))
 
