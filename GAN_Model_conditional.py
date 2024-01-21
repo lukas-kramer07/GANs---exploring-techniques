@@ -10,24 +10,24 @@ import keras
 from keras import layers, Model
 from keras.losses import BinaryCrossentropy
 
-gan_dir = "flowers_256"
+gan_dir = "flowers_32"
 LATENT_DIM = 100
-EPOCHS = 1000
+EPOCHS = 5000
 num_examples_to_generate = 16
 BATCH_SIZE = 64
 
 def make_generator_model(latent_dim=LATENT_DIM, classes=5):
 
     input_latent = layers.Input(shape=latent_dim)
-    lat= layers.Dense(64*64*latent_dim, use_bias=False)(input_latent)
+    lat= layers.Dense(8*8*latent_dim, use_bias=False)(input_latent)
     lat= layers.BatchNormalization()(lat)
     lat= layers.LeakyReLU()(lat)
-    lat= layers.Reshape((64, 64, latent_dim))(lat)
+    lat= layers.Reshape((8, 8, latent_dim))(lat)
 
     input_label = layers.Input(shape=(1,))
     il = layers.Embedding(classes, 50)(input_label)
-    il = layers.Dense(64*64)(il)
-    il = layers.Reshape((64, 64,1))(il)
+    il = layers.Dense(8*8)(il)
+    il = layers.Reshape((8, 8,1))(il)
 
     merge = layers.Concatenate()([lat, il])
     #assert merge.shape == (None, 7, 7, 129)  # Note: None is the batch size
@@ -48,7 +48,7 @@ def make_generator_model(latent_dim=LATENT_DIM, classes=5):
     return model
 
 
-def make_discriminator_model(in_shape = (256,256,3), classes=5):
+def make_discriminator_model(in_shape = (32,32,3), classes=5):
     input_label = layers.Input(shape=(1,))
     il = layers.Embedding(classes, 50)(input_label)
     il = layers.Dense(in_shape[0]*in_shape[1])(il)
@@ -126,7 +126,7 @@ class ModelMonitor(tf.keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs=None):
         # Notice `training` is set to False.
         # This is so all layers run in inference mode (batchnorm).
-        if (epoch+1) % 50 == 0:
+        if (epoch+1) % 100 == 0:
             predictions = self.model.generator([self.test_input, self.labels], training=False)
             _ = plt.figure(figsize=(4, 4))
 
@@ -148,7 +148,7 @@ class ModelMonitor(tf.keras.callbacks.Callback):
 
 def normalize(image, label):
     #image,label = element['image'], element['label']
-    return tf.cast((tf.image.resize(image, (256, 256))-127.5) / 127.5, tf.dtypes.float32), label
+    return tf.cast((tf.image.resize(image, (32, 32))-127.5) / 127.5, tf.dtypes.float32), label
 
 def main():
     
