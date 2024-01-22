@@ -11,9 +11,9 @@ from keras import layers, Model
 from keras.losses import BinaryCrossentropy
 import numpy as np
 
-gan_dir = "flowers_32"
+gan_dir = "flowers_64"
 LATENT_DIM = 100
-EPOCHS = 30000
+EPOCHS = 10000
 num_examples_to_generate = 16
 BATCH_SIZE = 512
 
@@ -149,7 +149,7 @@ class ModelMonitor(tf.keras.callbacks.Callback):
 
 def normalize(image, label):
     #image,label = element['image'], element['label']
-    return tf.cast((tf.image.resize(tf.image.rgb_to_grayscale(image), (64, 64))-127.5) / 127.5, tf.dtypes.float32), label
+    return tf.cast((tf.image.resize(image, (64, 64))-127.5) / 127.5, tf.dtypes.float32), label
 def visualize_data(test_ds, ds_info=None):
     num_images_to_display = 15
     plt.figure(figsize=(num_images_to_display, num_images_to_display))
@@ -163,7 +163,7 @@ def visualize_data(test_ds, ds_info=None):
                 2 * int(tf.sqrt(float(num_images_to_display))) + 1,
                 n + i + 1,
             )
-            plt.imshow(image[n])
+            plt.imshow(image[n]*127.5+127.5)
             if ds_info:
                 plt.title(
                     f"Test - {ds_info.features['label'].int2str(int(tf.argmax(label[n])))}",
@@ -204,8 +204,8 @@ def main():
     # build generator and discriminator
     generator = make_generator_model()
     discriminator = make_discriminator_model()
-    generator_optimizer = tf.keras.optimizers.Adam(1e-4)
-    discriminator_optimizer = tf.keras.optimizers.Adam(1e-4)
+    generator_optimizer = tf.keras.optimizers.Adam(1e-5)
+    discriminator_optimizer = tf.keras.optimizers.Adam(1e-5)
     generator_loss = BinaryCrossentropy()
     discriminator_loss = BinaryCrossentropy()
 
