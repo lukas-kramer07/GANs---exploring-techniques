@@ -9,12 +9,13 @@ import os
 import keras
 from keras import layers, Model
 from keras.losses import BinaryCrossentropy
+import numpy as np
 
 gan_dir = "flowers_32"
 LATENT_DIM = 100
-EPOCHS = 5000
+EPOCHS = 30000
 num_examples_to_generate = 16
-BATCH_SIZE = 64
+BATCH_SIZE = 512
 
 def make_generator_model(latent_dim=LATENT_DIM, classes=5):
 
@@ -32,7 +33,7 @@ def make_generator_model(latent_dim=LATENT_DIM, classes=5):
     merge = layers.Concatenate()([lat, il])
     #assert merge.shape == (None, 7, 7, 129)  # Note: None is the batch size
 
-    x= layers.Conv2DTranspose(128, (5, 5), strides=(1, 1), padding='same', use_bias=False)(merge)
+    x= layers.Conv2DTranspose(128, (5, 5), strides=(2, 2), padding='same', use_bias=False)(merge)
     #assert x.shape == (None, 7, 7, 128)
     x= layers.BatchNormalization()(x)
     x= layers.LeakyReLU()(x)
@@ -48,7 +49,7 @@ def make_generator_model(latent_dim=LATENT_DIM, classes=5):
     return model
 
 
-def make_discriminator_model(in_shape = (32,32,3), classes=5):
+def make_discriminator_model(in_shape = (64,64,3), classes=5):
     input_label = layers.Input(shape=(1,))
     il = layers.Embedding(classes, 50)(input_label)
     il = layers.Dense(in_shape[0]*in_shape[1])(il)
@@ -126,7 +127,7 @@ class ModelMonitor(tf.keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs=None):
         # Notice `training` is set to False.
         # This is so all layers run in inference mode (batchnorm).
-        if (epoch+1) % 100 == 0:
+        if (epoch+1) % 1000 == 0:
             predictions = self.model.generator([self.test_input, self.labels], training=False)
             _ = plt.figure(figsize=(4, 4))
 
@@ -148,8 +149,29 @@ class ModelMonitor(tf.keras.callbacks.Callback):
 
 def normalize(image, label):
     #image,label = element['image'], element['label']
-    return tf.cast((tf.image.resize(image, (32, 32))-127.5) / 127.5, tf.dtypes.float32), label
-
+    return tf.cast((tf.image.resize(tf.image.rgb_to_grayscale(image), (64, 64))-127.5) / 127.5, tf.dtypes.float32), label
+def visualize_data(test_ds, ds_info=None):
+    num_images_to_display = 15
+    plt.figure(figsize=(num_images_to_display, num_images_to_display))
+    count = 0
+    # Plot test samples
+    for i in range(int(np.ceil(num_images_to_display / BATCH_SIZE))):
+        image, label = next(iter(test_ds))
+        for n in range(min(BATCH_SIZE, num_images_to_display - i * BATCH_SIZE)):
+            plt.subplot(
+                2 * int(tf.sqrt(float(num_images_to_display))) + 1,
+                2 * int(tf.sqrt(float(num_images_to_display))) + 1,
+                n + i + 1,
+            )
+            plt.imshow(image[n])
+            if ds_info:
+                plt.title(
+                    f"Test - {ds_info.features['label'].int2str(int(tf.argmax(label[n])))}",
+                    fontsize=10,
+                )
+            plt.axis("off")
+            count += 1
+    plt.show() 
 def main():
     
     train_dataset = keras.utils.image_dataset_from_directory(
@@ -176,11 +198,14 @@ def main():
         .prefetch(AUTOTUNE)
     )
 
+    # visualize data
+    visualize_data(train_dataset)
+
     # build generator and discriminator
     generator = make_generator_model()
     discriminator = make_discriminator_model()
-    generator_optimizer = tf.keras.optimizers.Adam(1e-5)
-    discriminator_optimizer = tf.keras.optimizers.Adam(1e-5)
+    generator_optimizer = tf.keras.optimizers.Adam(1e-4)
+    discriminator_optimizer = tf.keras.optimizers.Adam(1e-4)
     generator_loss = BinaryCrossentropy()
     discriminator_loss = BinaryCrossentropy()
 
@@ -190,7 +215,7 @@ def main():
     GAN.compile(g_loss=generator_loss, d_loss=discriminator_loss, g_opt=generator_optimizer, d_opt=discriminator_optimizer)
 
     seed = tf.random.normal([num_examples_to_generate, LATENT_DIM])
-    test_labels = tf.constant([[0], [1], [2],[3],[4],[0], [1], [2],[3],[4],[0],[1],[2],[3],[4],[0]])#np.random.randint(0, 10, size=(16, 1))
+    test_labels = tf.constant([[0], [0], [0],[0],[0],[0], [0], [0],[0],[0],[0],[1],[2],[3],[4],[0]])#np.random.randint(0, 10, size=(16, 1))
     monitor = ModelMonitor(seed,test_labels, gan_dir)
 
     print('starte Training')
