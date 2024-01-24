@@ -14,7 +14,7 @@ import numpy as np
 gan_dir = "flowers_64"
 LATENT_DIM = 100
 EPOCHS = 40000
-num_examples_to_generate = 16
+num_examples_to_generate = 20
 BATCH_SIZE = 512
 
 def make_generator_model(latent_dim=LATENT_DIM, classes=5):
@@ -129,10 +129,10 @@ class ModelMonitor(tf.keras.callbacks.Callback):
         # This is so all layers run in inference mode (batchnorm).
         if (epoch+1) % 1000 == 0:
             predictions = self.model.generator([self.test_input, self.labels], training=False)
-            _ = plt.figure(figsize=(4, 4))
+            _ = plt.figure(figsize=(5, 4))
 
             for i in range(predictions.shape[0]):
-                plt.subplot(4, 4, i + 1)
+                plt.subplot(5, 4, i + 1)
                 plt.imshow(tf.cast(predictions[i, :, :, :] * 127.5 +127.5, tf.dtypes.int16))
                 plt.axis("off")
             os.makedirs(
@@ -163,7 +163,8 @@ def visualize_data(test_ds, ds_info=None):
                 2 * int(tf.sqrt(float(num_images_to_display))) + 1,
                 n + i + 1,
             )
-            plt.imshow(image[n]*127.5+127.5)
+            img = tf.cast(image[n] * 127.5 +127.5, tf.dtypes.int16)
+            plt.imshow(img)
             if ds_info:
                 plt.title(
                     f"Test - {ds_info.features['label'].int2str(int(tf.argmax(label[n])))}",
@@ -215,7 +216,7 @@ def main():
     GAN.compile(g_loss=generator_loss, d_loss=discriminator_loss, g_opt=generator_optimizer, d_opt=discriminator_optimizer)
 
     seed = tf.random.normal([num_examples_to_generate, LATENT_DIM])
-    test_labels = tf.constant([[0], [0], [0],[0],[0],[0], [0], [0],[0],[0],[0],[1],[2],[3],[4],[0]])#np.random.randint(0, 10, size=(16, 1))
+    test_labels = tf.constant([[0], [0], [0],[0],[1],[1], [1], [1],[2],[2],[2],[2],[3],[3],[3],[3],[4],[4],[4],[4]])#np.random.randint(0, 10, size=(16, 1))
     monitor = ModelMonitor(seed,test_labels, gan_dir)
 
     print('starte Training')
