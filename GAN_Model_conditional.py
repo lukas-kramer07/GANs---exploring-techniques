@@ -102,7 +102,7 @@ class GAN_Model(tf.keras.Model):
             y = tf.concat([tf.ones_like(disc_real), tf.zeros_like(disc_fake)], axis = 0)
             
             # apply noise to real labels
-            y += 0.05*tf.random.normal(tf.shape(y))
+            #y += 0.05*tf.random.normal(tf.shape(y))
             disc_loss = self.d_loss(y, y_hat)
 
             # Calculate Generator loss
@@ -127,7 +127,7 @@ class ModelMonitor(tf.keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs=None):
         # Notice `training` is set to False.
         # This is so all layers run in inference mode (batchnorm).
-        if (epoch+1) % 1000 == 0:
+        if (epoch+1) % 1000  == 0:
             predictions = self.model.generator([self.test_input, self.labels], training=False)
             _ = plt.figure(figsize=(5, 4))
 
