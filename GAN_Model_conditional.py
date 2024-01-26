@@ -42,8 +42,13 @@ def make_generator_model(latent_dim=LATENT_DIM, classes=5):
     #assert x.shape == (None, 14, 14, 128)
     x= layers.BatchNormalization()(x)
     x= layers.LeakyReLU()(x)
+    
+    x= layers.Conv2DTranspose(64, (5, 5), strides=(2, 2), padding='same', use_bias=False)(x)
+    #assert x.shape == (None, 14, 14, 128)
+    x= layers.BatchNormalization()(x)
+    x= layers.LeakyReLU()(x)
 
-    output= layers.Conv2DTranspose(3, (5, 5), strides=(2, 2), padding='same', use_bias=False, activation='tanh')(x)
+    output= layers.Conv2D(3, (5, 5), strides=(1, 1), padding='same', use_bias=False, activation='tanh')(x)
 
     model = Model([input_latent, input_label], output)
     return model
