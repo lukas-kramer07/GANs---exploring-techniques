@@ -42,7 +42,7 @@ def make_generator_model(latent_dim=LATENT_DIM, classes=5):
     #assert x.shape == (None, 14, 14, 128)
     x= layers.BatchNormalization()(x)
     x= layers.LeakyReLU()(x)
-    
+
     x= layers.Conv2DTranspose(64, (5, 5), strides=(2, 2), padding='same', use_bias=False)(x)
     #assert x.shape == (None, 14, 14, 128)
     x= layers.BatchNormalization()(x)
@@ -104,10 +104,10 @@ class GAN_Model(tf.keras.Model):
 
             # Calculate discriminator loss
             y_hat = tf.concat([disc_real, disc_fake], axis=0)
-            y = tf.concat([tf.ones_like(disc_real), tf.zeros_like(disc_fake)], axis = 0)
+            y = tf.concat([tf.ones_like(disc_real)-0.1, tf.zeros_like(disc_fake)+0.1], axis = 0) # add label smoothening
             
             # apply noise to real labels
-            #y += 0.05*tf.random.normal(tf.shape(y))
+            y += 0.05*tf.random.normal(tf.shape(y))
             disc_loss = self.d_loss(y, y_hat)
 
             # Calculate Generator loss
