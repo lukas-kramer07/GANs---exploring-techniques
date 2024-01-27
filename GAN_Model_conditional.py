@@ -54,7 +54,7 @@ def make_generator_model(latent_dim=LATENT_DIM, classes=5):
     return model
 
 
-def make_discriminator_model(in_shape = (64,64,3), classes=5):
+def make_critic_model(in_shape = (64,64,3), classes=5):
     input_label = layers.Input(shape=(1,))
     il = layers.Embedding(classes, 50)(input_label)
     il = layers.Dense(in_shape[0]*in_shape[1])(il)
@@ -73,16 +73,17 @@ def make_discriminator_model(in_shape = (64,64,3), classes=5):
     x = layers.Dropout(0.3)(x)
 
     x = layers.Flatten()(x)
+    # add linear output 
     output = layers.Dense(1)(x)
 
     model = Model([input_image, input_label], output)
     return model
 
 class GAN_Model(tf.keras.Model):
-    def __init__(self, generator, discriminator, latent_dim):
+    def __init__(self, generator, critic, latent_dim):
         super().__init__()
         self.generator = generator
-        self.discriminator = discriminator
+        self.critic = critic
         self.latent_dim = latent_dim
 
     def compile(self, g_loss, d_loss, g_opt, d_opt):
@@ -95,16 +96,16 @@ class GAN_Model(tf.keras.Model):
     #1 equals real, 0 equals fake
     def train_step(self, batch):
         (real_images, labels) = batch
-        # meassure gradients of generator and discriminator
+        # meassure gradients of generator and critic
         with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
             
             fake_images = self.generator([tf.cast(tf.random.normal([tf.shape(labels)[0], self.latent_dim]), dtype=tf.float32), labels], training=True)
-            disc_real = self.discriminator([real_images, labels], training=True)
-            disc_fake = self.discriminator([fake_images, labels], training=True)
+            disc_real = self.critic([real_images, labels], training=True)
+            disc_fake = self.critic([fake_images, labels], training=True)
 
-            # Calculate discriminator loss
+            # Calculate critic loss
             y_hat = tf.concat([disc_real, disc_fake], axis=0)
-            y = tf.concat([tf.ones_like(disc_real)-0.1, tf.zeros_like(disc_fake)+0.1], axis = 0) # add label smoothening
+            y = tf.concat([tf.ones_like(disc_real), -1*tf.ones_like(disc_fake)], axis = 0)
             
             # apply noise to real labels
             y += 0.05*tf.random.normal(tf.shape(y))
@@ -115,10 +116,10 @@ class GAN_Model(tf.keras.Model):
 
         # Calculate and apply gradients
         gen_grads = gen_tape.gradient(gen_loss, self.generator.trainable_variables)
-        disc_grads = disc_tape.gradient(disc_loss, self.discriminator.trainable_variables)
+        disc_grads = disc_tape.gradient(disc_loss, self.critic.trainable_variables)
 
         self.g_opt.apply_gradients(zip(gen_grads, self.generator.trainable_variables))
-        self.d_opt.apply_gradients(zip(disc_grads, self.discriminator.trainable_variables))
+        self.d_opt.apply_gradients(zip(disc_grads, self.critic.trainable_variables))
 
         return {"d_loss":disc_loss, "g_loss":gen_loss}
 
@@ -207,18 +208,18 @@ def main():
     # visualize data
     visualize_data(train_dataset)
 
-    # build generator and discriminator
+    # build generator and critic
     generator = make_generator_model()
-    discriminator = make_discriminator_model()
+    critic = make_critic_model()
     generator_optimizer = tf.keras.optimizers.Adam(1e-5)
-    discriminator_optimizer = tf.keras.optimizers.Adam(1e-5)
+    critic_optimizer = tf.keras.optimizers.Adam(1e-5)
     generator_loss = BinaryCrossentropy()
-    discriminator_loss = BinaryCrossentropy()
+    critic_loss = BinaryCrossentropy()
 
     
     # initiate and compile model
-    GAN = GAN_Model(generator=generator, discriminator=discriminator, latent_dim=LATENT_DIM)
-    GAN.compile(g_loss=generator_loss, d_loss=discriminator_loss, g_opt=generator_optimizer, d_opt=discriminator_optimizer)
+    GAN = GAN_Model(generator=generator, critic=critic, latent_dim=LATENT_DIM)
+    GAN.compile(g_loss=generator_loss, d_loss=critic_loss, g_opt=generator_optimizer, d_opt=critic_optimizer)
 
     seed = tf.random.normal([num_examples_to_generate, LATENT_DIM])
     test_labels = tf.constant([[0], [0], [0],[0],[1],[1], [1], [1],[2],[2],[2],[2],[3],[3],[3],[3],[4],[4],[4],[4]])#np.random.randint(0, 10, size=(16, 1))
@@ -226,7 +227,7 @@ def main():
 
     print('starte Training')
     history = GAN.fit(train_dataset, epochs=EPOCHS, callbacks=[monitor])
-    plt.plot(history.history['d_loss'], label='Discriminator_loss')
+    plt.plot(history.history['d_loss'], label='critic_loss')
     plt.plot(history.history['g_loss'], label='Generator_loss')
     plt.legend()
     plt.savefig(f'Gan_Tut/plots/{gan_dir}/Loss')
