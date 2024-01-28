@@ -18,6 +18,7 @@ LATENT_DIM = 100
 EPOCHS = 40000
 num_examples_to_generate = 20
 BATCH_SIZE = 512
+ITERATIONS_CRITIC = 5
 
 # implementation of wasserstein loss
 def wasserstein_loss(y_true, y_pred):
@@ -231,8 +232,8 @@ def main():
     # build generator and critic
     generator = make_generator_model()
     critic = make_critic_model()
-    generator_optimizer = tf.keras.optimizers.Adam(1e-5)
-    critic_optimizer = tf.keras.optimizers.Adam(1e-5)
+    generator_optimizer = tf.keras.optimizers.RMSprop(lr=0.00005)
+    critic_optimizer = tf.keras.optimizers.RMSprop(lr=0.00005)
     generator_loss = BinaryCrossentropy()
     critic_loss = BinaryCrossentropy()
 
