@@ -76,6 +76,7 @@ def make_generator_model(latent_dim=LATENT_DIM, classes=5):
 
 
 def make_critic_model(in_shape = (64,64,3), classes=5):
+    const = ClipConstraint(0.01)
     input_label = layers.Input(shape=(1,))
     il = layers.Embedding(classes, 50)(input_label)
     il = layers.Dense(in_shape[0]*in_shape[1])(il)
@@ -85,11 +86,11 @@ def make_critic_model(in_shape = (64,64,3), classes=5):
 
     merge = layers.Concatenate()([input_image, il])
 
-    x = layers.Conv2D(64, (5, 5), strides=(2, 2), padding='same')(merge)
+    x = layers.Conv2D(64, (5, 5), strides=(2, 2), padding='same', kernel_constraint=const)(merge)
     x = layers.LeakyReLU()(x)
     x = layers.Dropout(0.3)(x)
 
-    x = layers.Conv2D(128, (5, 5), strides=(2, 2), padding='same')(x)
+    x = layers.Conv2D(128, (5, 5), strides=(2, 2), padding='same', kernel_constraint=const)(x)
     x = layers.LeakyReLU()(x)
     x = layers.Dropout(0.3)(x)
 
