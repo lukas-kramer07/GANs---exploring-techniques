@@ -9,17 +9,17 @@ import os
 import keras
 from keras import layers, Model
 from keras.constraints import Constraint
-from keras.losses import BinaryCrossentropy
 import numpy as np
 from keras import backend as K
 
-gan_dir = "flowers_64"
+gan_dir = "nums_64"
 LATENT_DIM = 100
 EPOCHS = 40000
 num_examples_to_generate = 20
 BATCH_SIZE = 512
 ITERATIONS_CRITIC = 5
 
+## Wasserstein specific functions
 # implementation of wasserstein loss
 def wasserstein_loss(y_true, y_pred):
  return K.mean(y_true * y_pred)
@@ -38,6 +38,8 @@ class ClipConstraint(Constraint):
     def get_config(self):
         return {'clip_value': self.clip_value}
 
+
+## MODEL definiton
 def make_generator_model(latent_dim=LATENT_DIM, classes=5):
 
     input_latent = layers.Input(shape=latent_dim)
@@ -69,13 +71,13 @@ def make_generator_model(latent_dim=LATENT_DIM, classes=5):
     x= layers.BatchNormalization()(x)
     x= layers.LeakyReLU()(x)
 
-    output= layers.Conv2D(3, (5, 5), strides=(1, 1), padding='same', use_bias=False, activation='tanh')(x)
+    output= layers.Conv2D(1, (5, 5), strides=(1, 1), padding='same', use_bias=False, activation='tanh')(x)
 
     model = Model([input_latent, input_label], output)
     return model
 
 
-def make_critic_model(in_shape = (64,64,3), classes=5):
+def make_critic_model(in_shape = (64,64,1), classes=5):
     const = ClipConstraint(0.01)
     input_label = layers.Input(shape=(1,))
     il = layers.Embedding(classes, 50)(input_label)
@@ -101,6 +103,7 @@ def make_critic_model(in_shape = (64,64,3), classes=5):
     model = Model([input_image, input_label], output)
     return model
 
+
 class GAN_Model(tf.keras.Model):
     def __init__(self, generator, critic, latent_dim):
         super().__init__()
@@ -115,35 +118,47 @@ class GAN_Model(tf.keras.Model):
         self.g_opt = g_opt
         self.d_opt = d_opt
     
-    #1 equals real, 0 equals fake
+    # -1 equals real, 1 equals fake; although the critic assigns a score, where higher = more realistic 
     def train_step(self, batch):
         (real_images, labels) = batch
         # meassure gradients of generator and critic
-        with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
-            
+        for _ in range(ITERATIONS_CRITIC):
+            with tf.GradientTape() as disc_tape:
+                
+                fake_images = self.generator([tf.cast(tf.random.normal([tf.shape(labels)[0], self.latent_dim]), dtype=tf.float32), labels], training=True)
+                disc_real = self.critic([real_images, labels], training=True)
+                disc_fake = self.critic([fake_images, labels], training=True)
+
+                # Calculate critic loss for real images and fake images
+                y_real = -1*tf.ones_like(disc_real)
+                y_fake = tf.ones_like(disc_fake)
+
+                # apply noise to real labels
+                y_real += 0.05*tf.random.normal(tf.shape(y_real))
+                y_fake += 0.05*tf.random.normal(tf.shape(y_fake))
+
+                disc_loss_real = self.d_loss(y_real, disc_real)
+                disc_loss_fake = self.d_loss(y_fake, disc_fake)
+
+                #combine to obtain loss
+                disc_loss = disc_loss_fake + disc_loss_real
+            disc_grads = disc_tape.gradient(disc_loss, self.critic.trainable_variables)
+            self.d_opt.apply_gradients(zip(disc_grads, self.critic.trainable_variables))
+
+        with tf.GradientTape() as gen_tape:
             fake_images = self.generator([tf.cast(tf.random.normal([tf.shape(labels)[0], self.latent_dim]), dtype=tf.float32), labels], training=True)
-            disc_real = self.critic([real_images, labels], training=True)
             disc_fake = self.critic([fake_images, labels], training=True)
-
-            # Calculate critic loss
-            y_hat = tf.concat([disc_real, disc_fake], axis=0)
-            y = tf.concat([tf.ones_like(disc_real), -1*tf.ones_like(disc_fake)], axis = 0)
-            
-            # apply noise to real labels
-            y += 0.05*tf.random.normal(tf.shape(y))
-            disc_loss = self.d_loss(y, y_hat)
-
-            # Calculate Generator loss
-            gen_loss = self.g_loss(tf.ones_like(disc_fake), disc_fake)
+            # Calculate Generator loss with inverted labels
+            gen_loss = self.g_loss(-1*tf.ones_like(disc_fake), disc_fake)
 
         # Calculate and apply gradients
         gen_grads = gen_tape.gradient(gen_loss, self.generator.trainable_variables)
-        disc_grads = disc_tape.gradient(disc_loss, self.critic.trainable_variables)
+        
 
         self.g_opt.apply_gradients(zip(gen_grads, self.generator.trainable_variables))
-        self.d_opt.apply_gradients(zip(disc_grads, self.critic.trainable_variables))
+        
 
-        return {"d_loss":disc_loss, "g_loss":gen_loss}
+        return {"d_loss_real":disc_loss_real,"d_loss_fake":disc_loss_fake, "g_loss":gen_loss}
 
     
 
@@ -161,7 +176,7 @@ class ModelMonitor(tf.keras.callbacks.Callback):
 
             for i in range(predictions.shape[0]):
                 plt.subplot(5, 4, i + 1)
-                plt.imshow(tf.cast(predictions[i, :, :, :] * 127.5 +127.5, tf.dtypes.int16))
+                plt.imshow(tf.cast(predictions[i, :, :, 0] * 127.5 +127.5, tf.dtypes.int16), cmap='gray')
                 plt.axis("off")
             os.makedirs(
                 f"Gan_Tut/plots/{self.gan_dir}", exist_ok=True
@@ -175,8 +190,9 @@ class ModelMonitor(tf.keras.callbacks.Callback):
             )  # Create the "models" folder if it doesn't exist
             self.model.generator.save(f'training_checkpoints/{self.gan_dir}/model.keras')
 
-def normalize(image, label):
-    #image,label = element['image'], element['label']
+## DATA Manipulation
+def normalize(element):
+    image,label = element['image'], element['label']
     return tf.cast((tf.image.resize(image, (64, 64))-127.5) / 127.5, tf.dtypes.float32), label
 def visualize_data(test_ds, ds_info=None):
     num_images_to_display = 15
@@ -192,7 +208,7 @@ def visualize_data(test_ds, ds_info=None):
                 n + i + 1,
             )
             img = tf.cast(image[n] * 127.5 +127.5, tf.dtypes.int16)
-            plt.imshow(img)
+            plt.imshow(img, cmap='gray')
             if ds_info:
                 plt.title(
                     f"Test - {ds_info.features['label'].int2str(int(tf.argmax(label[n])))}",
@@ -201,21 +217,12 @@ def visualize_data(test_ds, ds_info=None):
             plt.axis("off")
             count += 1
     plt.show() 
+
+## MAIN function
 def main():
     
-    train_dataset = keras.utils.image_dataset_from_directory(
-    "/home/lukas/Code/Dataset_Flower/flowers",
-    labels='inferred',
-    label_mode='int',
-    class_names=None,
-    color_mode='rgb',
-    image_size=(256, 256),
-    interpolation='bilinear',
-    follow_links=False,
-    crop_to_aspect_ratio=True,
-    batch_size = None
-)
-    BUFFER_SIZE = 5000
+    train_dataset,info = tfds.load('mnist', split='train', with_info=True)
+    BUFFER_SIZE = info.splits['train'].num_examples
     AUTOTUNE = tf.data.experimental.AUTOTUNE
 
     train_dataset = (
@@ -235,8 +242,8 @@ def main():
     critic = make_critic_model()
     generator_optimizer = tf.keras.optimizers.RMSprop(lr=0.00005)
     critic_optimizer = tf.keras.optimizers.RMSprop(lr=0.00005)
-    generator_loss = BinaryCrossentropy()
-    critic_loss = BinaryCrossentropy()
+    generator_loss = wasserstein_loss
+    critic_loss = wasserstein_loss
 
     
     # initiate and compile model
