@@ -12,9 +12,9 @@ from keras.constraints import Constraint
 import numpy as np
 from keras import backend as K
 
-gan_dir = "nums_64"
+gan_dir = "nums_28"
 LATENT_DIM = 100
-EPOCHS = 400
+EPOCHS = 100
 num_examples_to_generate = 20
 BATCH_SIZE = 512
 ITERATIONS_CRITIC = 5
@@ -43,31 +43,26 @@ class ClipConstraint(Constraint):
 def make_generator_model(latent_dim=LATENT_DIM, classes=5):
 
     input_latent = layers.Input(shape=latent_dim)
-    lat= layers.Dense(8*8*latent_dim, use_bias=False)(input_latent)
+    lat= layers.Dense(7*7*latent_dim, use_bias=False)(input_latent)
     lat= layers.BatchNormalization()(lat)
     lat= layers.LeakyReLU()(lat)
-    lat= layers.Reshape((8, 8, latent_dim))(lat)
+    lat= layers.Reshape((7, 7, latent_dim))(lat)
 
     input_label = layers.Input(shape=(1,))
     il = layers.Embedding(classes, 50)(input_label)
-    il = layers.Dense(8*8)(il)
-    il = layers.Reshape((8, 8,1))(il)
+    il = layers.Dense(7*7)(il)
+    il = layers.Reshape((7, 7,1))(il)
 
     merge = layers.Concatenate()([lat, il])
     #assert merge.shape == (None, 7, 7, 129)  # Note: None is the batch size
 
     x= layers.Conv2DTranspose(128, (5, 5), strides=(2, 2), padding='same', use_bias=False)(merge)
-    #assert x.shape == (None, 7, 7, 128)
-    x= layers.BatchNormalization()(x)
-    x= layers.LeakyReLU()(x)
-
-    x= layers.Conv2DTranspose(64, (5, 5), strides=(2, 2), padding='same', use_bias=False)(x)
     #assert x.shape == (None, 14, 14, 128)
     x= layers.BatchNormalization()(x)
     x= layers.LeakyReLU()(x)
 
     x= layers.Conv2DTranspose(64, (5, 5), strides=(2, 2), padding='same', use_bias=False)(x)
-    #assert x.shape == (None, 14, 14, 128)
+    #assert x.shape == (None, 28, 28, 128)
     x= layers.BatchNormalization()(x)
     x= layers.LeakyReLU()(x)
 
@@ -77,7 +72,7 @@ def make_generator_model(latent_dim=LATENT_DIM, classes=5):
     return model
 
 
-def make_critic_model(in_shape = (64,64,1), classes=5):
+def make_critic_model(in_shape = (28,28,1), classes=5):
     const = ClipConstraint(0.01)
     input_label = layers.Input(shape=(1,))
     il = layers.Embedding(classes, 50)(input_label)
@@ -170,7 +165,7 @@ class ModelMonitor(tf.keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs=None):
         # Notice `training` is set to False.
         # This is so all layers run in inference mode (batchnorm).
-        if (epoch+1) % 1000  == 0:
+        if (epoch+1) % 10  == 0:
             predictions = self.model.generator([self.test_input, self.labels], training=False)
             _ = plt.figure(figsize=(5, 4))
 
@@ -193,7 +188,7 @@ class ModelMonitor(tf.keras.callbacks.Callback):
 ## DATA Manipulation
 def normalize(element):
     image,label = element['image'], element['label']
-    return tf.cast((tf.image.resize(image, (64, 64))-127.5) / 127.5, tf.dtypes.float32), label
+    return tf.cast((tf.image.resize(image, (28, 28))-127.5) / 127.5, tf.dtypes.float32), label
 def visualize_data(test_ds, ds_info=None):
     num_images_to_display = 15
     plt.figure(figsize=(num_images_to_display, num_images_to_display))
