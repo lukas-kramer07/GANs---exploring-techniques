@@ -235,8 +235,8 @@ def main():
     # build generator and critic
     generator = make_generator_model()
     critic = make_critic_model()
-    generator_optimizer = tf.keras.optimizers.RMSprop(lr=0.00005)
-    critic_optimizer = tf.keras.optimizers.RMSprop(lr=0.00005)
+    generator_optimizer = tf.keras.optimizers.RMSprop(learning_rate=0.00005)
+    critic_optimizer = tf.keras.optimizers.RMSprop(learning_rate=0.00005)
     generator_loss = wasserstein_loss
     critic_loss = wasserstein_loss
 
