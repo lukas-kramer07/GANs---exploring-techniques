@@ -199,7 +199,7 @@ def test_model(model, model_name, train_ds, test_ds):
 
     # custom TensorBoard callback
     Current_Time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    LOG_DIR = "./logs/fit/" + Current_Time
+    LOG_DIR = "Training/logs/fit/" + Current_Time
 
     class LRTensorBoard(TensorBoard):
         # add other arguments to __init__ if you need
@@ -214,7 +214,7 @@ def test_model(model, model_name, train_ds, test_ds):
             super().on_epoch_end(epoch, logs)
 
     tensorboard_callback = tf.keras.callbacks.TensorBoard(
-        log_dir="./logsis", histogram_freq=1, profile_batch="50,60"
+        log_dir="Training/logsis", histogram_freq=1, profile_batch="50,60"
     )
     scheduler_callback = utils.WarmUpCosineDecayScheduler(
         learning_rate_base=0.01, warmup_epoch=1, hold_base_rate_steps=5, verbose=1
@@ -232,7 +232,7 @@ def test_model(model, model_name, train_ds, test_ds):
     # train for 20 epochs
     history = model.fit(
         train_ds,
-        epochs=80,
+        epochs=10,
         validation_data=test_ds,
         callbacks=[
             scheduler_callback,

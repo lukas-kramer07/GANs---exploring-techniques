@@ -7,9 +7,9 @@ import os
 
 def model_eval(model, model_name, history, test_ds, class_names):
     Plots.change_plot(history)
-    # Create the "plots" folder if it doesn't exist
-    os.makedirs(f"plots/{model_name}", exist_ok=True)
-    plt.savefig(f"plots/{model_name}/history_with_lr_and_change.png")
+    # Create the "Training/plots" folder if it doesn't exist
+    os.makedirs(f"Training/plots/{model_name}", exist_ok=True)
+    plt.savefig(f"Training/plots/{model_name}/history_with_lr_and_change.png")
 
     y_probs = model.predict(test_ds)
     y_preds = tf.argmax(y_probs, axis=1)
@@ -21,11 +21,11 @@ def model_eval(model, model_name, history, test_ds, class_names):
                         figsize=(13,13),
                         text_size=8,
                         model_name=model_name)
-    os.makedirs(f"plots/{model_name}", exist_ok=True)  # Create the "models" folder if it doesn't exist
-    plt.savefig(f"plots/{model_name}/confusion_matrix")
+    os.makedirs(f"Training/plots/{model_name}", exist_ok=True)  # Create the "models" folder if it doesn't exist
+    plt.savefig(f"Training/plots/{model_name}/confusion_matrix")
 
     test_loss, test_acc = model.evaluate(test_ds, verbose=1)
     print(f"test_acc: {test_acc}; test_loss: {test_loss}")
     model.summary()
-    os.makedirs(f"model_checkpoints", exist_ok=True)  # Create the "models" folder if it doesn't exist
-    model.save(f"model_checkpoints/{model_name}")#-> move to utils
+    os.makedirs(f"Training/training_checkpoints", exist_ok=True)  # Create the "models" folder if it doesn't exist
+    model.save(f"Training/training_checkpoints/{model_name}")#-> move to utils
