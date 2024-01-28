@@ -187,9 +187,9 @@ def generate_and_save_images(model, epoch, test_input, dataset):
                 plt.imshow(tf.cast(predictions[i, :, :, 0] * 127.5 +127.5, tf.dtypes.int16), cmap='gray')
                 plt.axis("off")
     os.makedirs(
-        f"Gan_Tut/plots/{gan_dir}", exist_ok=True
+        f"Training/plots/{gan_dir}", exist_ok=True
     )  # Create the "models" folder if it doesn't exist
-    plt.savefig(f"Gan_Tut/plots/{gan_dir}/image_at_epoch_{epoch}.png")
+    plt.savefig(f"Training/plots/{gan_dir}/image_at_epoch_{epoch}.png")
     plt.close()
 
 
@@ -222,7 +222,7 @@ def main():
     discriminator = make_discriminator_model()
     generator_optimizer = tf.keras.optimizers.Adam(1e-4)
     discriminator_optimizer = tf.keras.optimizers.Adam(1e-4)
-    checkpoint_dir = "./training_checkpoints"
+    checkpoint_dir = "Training/training_checkpoints"
     checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
     checkpoint = tf.train.Checkpoint(
         generator_optimizer=generator_optimizer,

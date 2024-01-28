@@ -119,9 +119,9 @@ class ModelMonitor(tf.keras.callbacks.Callback):
                 plt.imshow(tf.cast(predictions[i, :, :, 0] * 127.5 +127.5, tf.dtypes.int16), cmap='gray')
                 plt.axis("off")
             os.makedirs(
-                f"Gan_Tut/plots/{gan_dir}", exist_ok=True
+                f"Training/plots/{gan_dir}", exist_ok=True
             )  # Create the "models" folder if it doesn't exist
-            plt.savefig(f"Gan_Tut/plots/{gan_dir}/image_at_epoch_{epoch+1}.png")
+            plt.savefig(f"Training/plots/{gan_dir}/image_at_epoch_{epoch+1}.png")
             plt.close()
 
             #save checkpoints
@@ -156,7 +156,7 @@ def main():
     discriminator_loss = BinaryCrossentropy()
 
     # establish checkpoints
-    checkpoint_dir = "./training_checkpoints"
+    checkpoint_dir = "Training/training_checkpoints"
     checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
     checkpoint = tf.train.Checkpoint(
         generator_optimizer=generator_optimizer,

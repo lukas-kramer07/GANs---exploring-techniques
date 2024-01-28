@@ -174,9 +174,9 @@ class ModelMonitor(tf.keras.callbacks.Callback):
                 plt.imshow(tf.cast(predictions[i, :, :, 0] * 127.5 +127.5, tf.dtypes.int16), cmap='gray')
                 plt.axis("off")
             os.makedirs(
-                f"Gan_Tut/plots/{self.gan_dir}", exist_ok=True
+                f"Training/plots/{self.gan_dir}", exist_ok=True
             )  # Create the "models" folder if it doesn't exist
-            plt.savefig(f"Gan_Tut/plots/{self.gan_dir}/image_at_epoch_{epoch+1}.png")
+            plt.savefig(f"Training/plots/{self.gan_dir}/image_at_epoch_{epoch+1}.png")
             plt.close()
 
             #save model
@@ -255,7 +255,7 @@ def main():
     plt.plot(history.history['d_loss_fake'], label='Critic_loss_fake')
     plt.plot(history.history['g_loss'], label='Generator_loss')
     plt.legend()
-    plt.savefig(f'Gan_Tut/plots/{gan_dir}/Loss')
+    plt.savefig(f'Training/plots/{gan_dir}/Loss')
     plt.show()
 
 if __name__ == "__main__":

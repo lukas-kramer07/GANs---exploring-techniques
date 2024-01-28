@@ -1,7 +1,8 @@
 import tensorflow as tf
 import keras
 import matplotlib.pyplot as plt
-from GAN_Scripts.GAN_Model_conditional import LATENT_DIM
+
+LATENT_DIM = 100
 gan_dir = "fashion_28"
 num_examples_to_generate = 16
 classes = {
@@ -18,7 +19,7 @@ classes = {
 }
 def predict(label, seed):
     labels = tf.expand_dims(tf.convert_to_tensor([label] * num_examples_to_generate), axis=-1)
-    generator = keras.models.load_model(f'training_checkpoints/{gan_dir}/model.keras')
+    generator = keras.models.load_model(f'Training/training_checkpoints/{gan_dir}/model.keras')
     predictions = generator([seed, labels], training=False)
     _ = plt.figure(figsize=(4, 4))
 
