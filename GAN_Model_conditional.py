@@ -14,7 +14,7 @@ from keras import backend as K
 
 gan_dir = "nums_64"
 LATENT_DIM = 100
-EPOCHS = 40000
+EPOCHS = 400
 num_examples_to_generate = 20
 BATCH_SIZE = 512
 ITERATIONS_CRITIC = 5
@@ -256,7 +256,8 @@ def main():
 
     print('starte Training')
     history = GAN.fit(train_dataset, epochs=EPOCHS, callbacks=[monitor])
-    plt.plot(history.history['d_loss'], label='critic_loss')
+    plt.plot(history.history['d_loss_real'], label='Critic_loss_real')
+    plt.plot(history.history['d_loss_fake'], label='Critic_loss_fake')
     plt.plot(history.history['g_loss'], label='Generator_loss')
     plt.legend()
     plt.savefig(f'Gan_Tut/plots/{gan_dir}/Loss')
