@@ -10,12 +10,17 @@ import keras
 from keras import layers, Model
 from keras.losses import BinaryCrossentropy
 import numpy as np
+from keras import backend as K
 
 gan_dir = "flowers_64"
 LATENT_DIM = 100
 EPOCHS = 40000
 num_examples_to_generate = 20
 BATCH_SIZE = 512
+
+# implementation of wasserstein loss
+def wasserstein_loss(y_true, y_pred):
+ return K.mean(y_true * y_pred)
 
 def make_generator_model(latent_dim=LATENT_DIM, classes=5):
 
