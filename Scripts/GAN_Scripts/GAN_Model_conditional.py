@@ -181,9 +181,9 @@ class ModelMonitor(tf.keras.callbacks.Callback):
 
             #save model
             os.makedirs(
-                f"training_checkpoints/{self.gan_dir}/", exist_ok=True
+                f"Training/training_checkpoints/{self.gan_dir}/", exist_ok=True
             )  # Create the "models" folder if it doesn't exist
-            self.model.generator.save(f'training_checkpoints/{self.gan_dir}/model.keras')
+            self.model.generator.save(f'Training/training_checkpoints/{self.gan_dir}/model.keras')
 
 ## DATA Manipulation
 def normalize(element):
@@ -248,9 +248,11 @@ def main():
     seed = tf.random.normal([num_examples_to_generate, LATENT_DIM])
     test_labels = tf.constant([[0], [0], [0],[0],[1],[1], [1], [1],[2],[2],[2],[2],[3],[3],[3],[3],[4],[4],[4],[4]])#np.random.randint(0, 10, size=(16, 1))
     monitor = ModelMonitor(seed,test_labels, gan_dir)
-
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(
+        log_dir="Training/logsis", histogram_freq=1, profile_batch="50,60"
+    )
     print('starte Training')
-    history = GAN.fit(train_dataset, epochs=EPOCHS, callbacks=[monitor])
+    history = GAN.fit(train_dataset, epochs=EPOCHS, callbacks=[monitor, tensorboard_callback])
     plt.plot(history.history['d_loss_real'], label='Critic_loss_real')
     plt.plot(history.history['d_loss_fake'], label='Critic_loss_fake')
     plt.plot(history.history['g_loss'], label='Generator_loss')
