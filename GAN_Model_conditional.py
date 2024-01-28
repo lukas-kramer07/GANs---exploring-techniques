@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import os
 import keras
 from keras import layers, Model
+from keras.constraints import Constraint
 from keras.losses import BinaryCrossentropy
 import numpy as np
 from keras import backend as K
@@ -21,6 +22,20 @@ BATCH_SIZE = 512
 # implementation of wasserstein loss
 def wasserstein_loss(y_true, y_pred):
  return K.mean(y_true * y_pred)
+
+# clip model weights to a bounding area defined by clip_value
+class ClipConstraint(Constraint):
+    # set clip value when initialized
+    def __init__(self, clip_value):
+        self.clip_value = clip_value
+    
+    # clip model weights to hypercube
+    def __call__(self, weights):
+        return K.clip(weights, -self.clip_value, self.clip_value)
+    
+    # get the config
+    def get_config(self):
+        return {'clip_value': self.clip_value}
 
 def make_generator_model(latent_dim=LATENT_DIM, classes=5):
 
