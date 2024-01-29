@@ -9,7 +9,7 @@ import os
 from keras import layers, Model
 from keras.losses import BinaryCrossentropy
 
-gan_dir = "num_28"
+gan_dir = "nums_28"
 LATENT_DIM = 128
 EPOCHS = 10000
 num_examples_to_generate = 16

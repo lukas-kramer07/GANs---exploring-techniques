@@ -3,7 +3,7 @@ import keras
 import matplotlib.pyplot as plt
 
 LATENT_DIM = 100
-gan_dir = "fashion_28"
+gan_dir = "nums_28"
 num_examples_to_generate = 16
 classes = {
     'T-shirt/Top' : 0,
@@ -19,6 +19,7 @@ classes = {
 }
 def predict(label, seed):
     labels = tf.expand_dims(tf.convert_to_tensor([label] * num_examples_to_generate), axis=-1)
+    print(labels)
     generator = keras.models.load_model(f'Training/training_checkpoints/{gan_dir}/model.keras')
     predictions = generator([seed, labels], training=False)
     _ = plt.figure(figsize=(4, 4))

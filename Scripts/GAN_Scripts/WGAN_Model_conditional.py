@@ -14,7 +14,7 @@ from keras import backend as K
 
 gan_dir = "nums_28"
 LATENT_DIM = 100
-EPOCHS = 1000
+EPOCHS = 3000
 num_examples_to_generate = 20
 BATCH_SIZE = 512
 ITERATIONS_CRITIC = 5
@@ -66,7 +66,7 @@ def make_generator_model(latent_dim=LATENT_DIM, classes=5):
     x= layers.BatchNormalization()(x)
     x= layers.LeakyReLU()(x)
 
-    output= layers.Conv2D(1, (5, 5), strides=(1, 1), padding='same', use_bias=False, activation='tanh')(x)
+    output= layers.Conv2DTranspose(1, (5, 5), strides=(1, 1), padding='same', use_bias=False, activation='tanh')(x)
 
     model = Model([input_latent, input_label], output)
     return model
@@ -165,7 +165,7 @@ class ModelMonitor(tf.keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs=None):
         # Notice `training` is set to False.
         # This is so all layers run in inference mode (batchnorm).
-        if (epoch+1) % 10  == 0:
+        if (epoch+1) % 100  == 0:
             predictions = self.model.generator([self.test_input, self.labels], training=False)
             _ = plt.figure(figsize=(5, 4))
 
@@ -246,13 +246,13 @@ def main():
     GAN.compile(g_loss=generator_loss, d_loss=critic_loss, g_opt=generator_optimizer, d_opt=critic_optimizer)
 
     seed = tf.random.normal([num_examples_to_generate, LATENT_DIM])
-    test_labels = tf.constant([[0], [0], [0],[0],[1],[1], [1], [1],[2],[2],[2],[2],[3],[3],[3],[3],[4],[4],[4],[4]])#np.random.randint(0, 10, size=(16, 1))
+    test_labels = tf.constant([[0], [1], [2],[3],[4],[5], [6], [7],[8],[9],[0],[1],[2],[3],[4],[5],[6],[7],[8],[9]])#np.random.randint(0, 10, size=(16, 1))
     monitor = ModelMonitor(seed,test_labels, gan_dir)
     tensorboard_callback = tf.keras.callbacks.TensorBoard(
         log_dir="Training/logsis", histogram_freq=1, profile_batch="50,60"
     )
     print('starte Training')
-    history = GAN.fit(train_dataset, epochs=EPOCHS, callbacks=[monitor, tensorboard_callback])
+    history = GAN.fit(train_dataset, epochs=EPOCHS, callbacks=[monitor])#, tensorboard_callback])
     plt.plot(history.history['d_loss_real'], label='Critic_loss_real')
     plt.plot(history.history['d_loss_fake'], label='Critic_loss_fake')
     plt.plot(history.history['g_loss'], label='Generator_loss')
