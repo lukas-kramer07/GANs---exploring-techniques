@@ -47,16 +47,9 @@ def make_generator_model(latent_dim=LATENT_DIM, classes=5):
     lat= layers.BatchNormalization()(lat)
     lat= layers.LeakyReLU()(lat)
     lat= layers.Reshape((8, 8, latent_dim))(lat)
-
-    input_label = layers.Input(shape=(1,))
-    il = layers.Embedding(classes, 50)(input_label)
-    il = layers.Dense(8*8)(il)
-    il = layers.Reshape((8, 8,1))(il)
-
-    merge = layers.Concatenate()([lat, il])
     #assert merge.shape == (None, 7, 7, 129)  # Note: None is the batch size
 
-    x= layers.Conv2DTranspose(128, (5, 5), strides=(2, 2), padding='same', use_bias=False)(merge)
+    x= layers.Conv2DTranspose(128, (5, 5), strides=(2, 2), padding='same', use_bias=False)(lat)
     #assert x.shape == (None, 14, 14, 128)
     x= layers.BatchNormalization()(x)
     x= layers.LeakyReLU()(x)
@@ -68,22 +61,15 @@ def make_generator_model(latent_dim=LATENT_DIM, classes=5):
 
     output= layers.Conv2DTranspose(3, (5, 5), strides=(2, 2), padding='same', use_bias=False, activation='tanh')(x)
 
-    model = Model([input_latent, input_label], output)
+    model = Model(input_latent, output)
     return model
 
 
 def make_critic_model(in_shape = (64,64,3), classes=5):
     const = ClipConstraint(0.01)
-    input_label = layers.Input(shape=(1,))
-    il = layers.Embedding(classes, 50)(input_label)
-    il = layers.Dense(in_shape[0]*in_shape[1])(il)
-    il = layers.Reshape((in_shape[0], in_shape[1],1))(il)
 
     input_image = layers.Input(shape=in_shape)   
-
-    merge = layers.Concatenate()([input_image, il])
-
-    x = layers.Conv2D(64, (5, 5), strides=(2, 2), padding='same', kernel_constraint=const)(merge)
+    x = layers.Conv2D(64, (5, 5), strides=(2, 2), padding='same', kernel_constraint=const)(input_image)
     x = layers.LeakyReLU()(x)
     x = layers.Dropout(0.3)(x)
 
@@ -95,7 +81,7 @@ def make_critic_model(in_shape = (64,64,3), classes=5):
     # add linear output 
     output = layers.Dense(1)(x)
 
-    model = Model([input_image, input_label], output)
+    model = Model(input_image, output)
     return model
 
 
@@ -120,9 +106,9 @@ class GAN_Model(tf.keras.Model):
         for _ in range(ITERATIONS_CRITIC):
             with tf.GradientTape() as disc_tape:
                 
-                fake_images = self.generator([tf.cast(tf.random.normal([tf.shape(labels)[0], self.latent_dim]), dtype=tf.float32), labels], training=True)
-                disc_real = self.critic([real_images, labels], training=True)
-                disc_fake = self.critic([fake_images, labels], training=True)
+                fake_images = self.generator(tf.cast(tf.random.normal([tf.shape(labels)[0], self.latent_dim]), dtype=tf.float32), training=True)
+                disc_real = self.critic(real_images, training=True)
+                disc_fake = self.critic(fake_images, training=True)
 
                 # Calculate critic loss for real images and fake images
                 y_real = -1*tf.ones_like(disc_real)
@@ -141,8 +127,8 @@ class GAN_Model(tf.keras.Model):
             self.d_opt.apply_gradients(zip(disc_grads, self.critic.trainable_variables))
 
         with tf.GradientTape() as gen_tape:
-            fake_images = self.generator([tf.cast(tf.random.normal([tf.shape(labels)[0], self.latent_dim]), dtype=tf.float32), labels], training=True)
-            disc_fake = self.critic([fake_images, labels], training=True)
+            fake_images = self.generator(tf.cast(tf.random.normal([tf.shape(labels)[0], self.latent_dim]), dtype=tf.float32), training=True)
+            disc_fake = self.critic(fake_images, training=True)
             # Calculate Generator loss with inverted labels
             gen_loss = self.g_loss(-1*tf.ones_like(disc_fake), disc_fake)
 
@@ -158,15 +144,14 @@ class GAN_Model(tf.keras.Model):
     
 
 class ModelMonitor(tf.keras.callbacks.Callback):
-    def __init__(self, test_input, test_labels, gan_dir):
+    def __init__(self, test_input, gan_dir):
         self.gan_dir = gan_dir
-        self.labels = test_labels
         self.test_input = test_input
     def on_epoch_end(self, epoch, logs=None):
         # Notice `training` is set to False.
         # This is so all layers run in inference mode (batchnorm).
         if (epoch+1) % 50  == 0:
-            predictions = self.model.generator([self.test_input, self.labels], training=False)
+            predictions = self.model.generator(self.test_input, training=False)
             _ = plt.figure(figsize=(5, 4))
 
             for i in range(predictions.shape[0]):
@@ -247,8 +232,8 @@ def main():
     GAN.compile(g_loss=generator_loss, d_loss=critic_loss, g_opt=generator_optimizer, d_opt=critic_optimizer)
 
     seed = tf.random.normal([num_examples_to_generate, LATENT_DIM])
-    test_labels = tf.constant([[0]]*10 + [[1]]*10)#np.random.randint(0, 10, size=(16, 1))
-    monitor = ModelMonitor(seed,test_labels, gan_dir)
+
+    monitor = ModelMonitor(seed, gan_dir)
     tensorboard_callback = tf.keras.callbacks.TensorBoard(
         log_dir="Training/logsis", histogram_freq=1, profile_batch="50,60"
     )
