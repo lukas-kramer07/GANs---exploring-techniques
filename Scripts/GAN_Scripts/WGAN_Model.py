@@ -202,7 +202,7 @@ def visualize_data(test_ds, ds_info=None):
 def main():
     
     train_dataset = keras.utils.image_dataset_from_directory(
-    directory='/home/lukas/Code/Dataset',
+    directory='/home/lukas/Code/Dataset/train',
     label_mode='int',
     class_names=None,
     color_mode='rgb',
