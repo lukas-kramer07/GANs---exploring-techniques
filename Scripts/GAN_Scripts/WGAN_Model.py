@@ -171,8 +171,8 @@ class ModelMonitor(tf.keras.callbacks.Callback):
             self.model.generator.save(f'Training/training_checkpoints/{self.gan_dir}/model.keras')
 
 ## DATA Manipulation
-def normalize(element):
-    image,label = element['image'], element['label']
+def normalize(image,label):
+    #image,label = element['image'], element['label']
     return tf.cast((tf.image.resize(image, (64, 64))-127.5) / 127.5, tf.dtypes.float32), label
 def visualize_data(test_ds, ds_info=None):
     num_images_to_display = 15
@@ -201,9 +201,23 @@ def visualize_data(test_ds, ds_info=None):
 ## MAIN function
 def main():
     
-    train_dataset,info = tfds.load('cats_vs_dogs', split='train', with_info=True)
-    print(f'There are {info.splits["train"].num_examples} examples')
-    BUFFER_SIZE = info.splits['train'].num_examples
+    train_dataset = keras.utils.image_dataset_from_directory(
+    directory='/home/lukas/Code/Dataset',
+    label_mode='int',
+    class_names=None,
+    color_mode='rgb',
+    batch_size=None,
+    image_size=(256, 256),
+    shuffle=True,
+    seed=None,
+    validation_split=None,
+    subset=None,
+    interpolation='bilinear',
+    follow_links=False,
+    crop_to_aspect_ratio=False,
+)
+    #print(f'There are {info.splits["train"].num_examples} examples')
+    BUFFER_SIZE = 10000
     AUTOTUNE = tf.data.experimental.AUTOTUNE
 
     train_dataset = (
