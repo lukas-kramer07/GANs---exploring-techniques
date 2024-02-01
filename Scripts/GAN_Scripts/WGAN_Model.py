@@ -217,7 +217,7 @@ def main():
     crop_to_aspect_ratio=False,
 )
     #print(f'There are {info.splits["train"].num_examples} examples')
-    BUFFER_SIZE = 10000
+    BUFFER_SIZE = 20000
     AUTOTUNE = tf.data.experimental.AUTOTUNE
 
     train_dataset = (
