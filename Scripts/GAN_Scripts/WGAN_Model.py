@@ -12,7 +12,7 @@ from keras.constraints import Constraint
 import numpy as np
 from keras import backend as K
 
-gan_dir = "cats_dogs_64"
+gan_dir = "birds_64"
 LATENT_DIM = 100
 EPOCHS = 1000
 num_examples_to_generate = 20
