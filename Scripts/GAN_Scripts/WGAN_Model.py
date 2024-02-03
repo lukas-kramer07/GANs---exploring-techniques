@@ -12,7 +12,7 @@ from keras.constraints import Constraint
 import numpy as np
 from keras import backend as K
 
-gan_dir = "birds_64"
+gan_dir = "nums_28"
 LATENT_DIM = 100
 EPOCHS = 1000
 num_examples_to_generate = 20
@@ -40,13 +40,13 @@ class ClipConstraint(Constraint):
 
 
 ## MODEL definiton
-def make_generator_model(latent_dim=LATENT_DIM, classes=5):
+def make_generator_model(latent_dim=LATENT_DIM):
 
     input_latent = layers.Input(shape=latent_dim)
-    lat= layers.Dense(8*8*latent_dim, use_bias=False)(input_latent)
+    lat= layers.Dense(7*7*latent_dim, use_bias=False)(input_latent)
     lat= layers.BatchNormalization()(lat)
     lat= layers.LeakyReLU()(lat)
-    lat= layers.Reshape((8, 8, latent_dim))(lat)
+    lat= layers.Reshape((7, 7, latent_dim))(lat)
     #assert merge.shape == (None, 7, 7, 129)  # Note: None is the batch size
 
     x= layers.Conv2DTranspose(128, (5, 5), strides=(2, 2), padding='same', use_bias=False)(lat)
@@ -59,13 +59,13 @@ def make_generator_model(latent_dim=LATENT_DIM, classes=5):
     x= layers.BatchNormalization()(x)
     x= layers.LeakyReLU()(x)
 
-    output= layers.Conv2DTranspose(3, (5, 5), strides=(2, 2), padding='same', use_bias=False, activation='tanh')(x)
+    output= layers.Conv2DTranspose(1, (5, 5), strides=(1, 1), padding='same', use_bias=False, activation='tanh')(x)
 
     model = Model(input_latent, output)
     return model
 
 
-def make_critic_model(in_shape = (64,64,3), classes=5):
+def make_critic_model(in_shape = (28,28,1)):
     const = ClipConstraint(0.01)
 
     input_image = layers.Input(shape=in_shape)   
@@ -156,7 +156,7 @@ class ModelMonitor(tf.keras.callbacks.Callback):
 
             for i in range(predictions.shape[0]):
                 plt.subplot(5, 4, i + 1)
-                plt.imshow(tf.cast(predictions[i, :, :, :] * 127.5 +127.5, tf.dtypes.int16))
+                plt.imshow(tf.cast(predictions[i, :, :, 0] * 127.5 +127.5, tf.dtypes.int16))
                 plt.axis("off")
             os.makedirs(
                 f"Training/plots/{self.gan_dir}", exist_ok=True
@@ -188,7 +188,7 @@ def visualize_data(test_ds, ds_info=None):
                 n + i + 1,
             )
             img = tf.cast(image[n] * 127.5 +127.5, tf.dtypes.int16)
-            plt.imshow(img)
+            plt.imshow(img, cmap='gray')
             if ds_info:
                 plt.title(
                     f"Test - {ds_info.features['label'].int2str(int(tf.argmax(label[n])))}",
@@ -201,23 +201,9 @@ def visualize_data(test_ds, ds_info=None):
 ## MAIN function
 def main():
     
-    train_dataset = keras.utils.image_dataset_from_directory(
-    directory='/home/lukas/Code/Dataset/train',
-    label_mode='int',
-    class_names=None,
-    color_mode='rgb',
-    batch_size=None,
-    image_size=(256, 256),
-    shuffle=True,
-    seed=None,
-    validation_split=None,
-    subset=None,
-    interpolation='bilinear',
-    follow_links=False,
-    crop_to_aspect_ratio=False,
-)
-    #print(f'There are {info.splits["train"].num_examples} examples')
-    BUFFER_SIZE = 20000
+    train_dataset,info = tfds.load('mnist', split='train', with_info=True)
+    print(f'There are {info.splits["train"].num_examples} examples')
+    BUFFER_SIZE = info.splits["train"].num_examples
     AUTOTUNE = tf.data.experimental.AUTOTUNE
 
     train_dataset = (
