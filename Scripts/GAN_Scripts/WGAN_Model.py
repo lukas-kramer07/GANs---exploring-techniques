@@ -121,10 +121,13 @@ class GAN_Model(tf.keras.Model):
                 disc_loss_real = self.d_loss(y_real, disc_real)
                 disc_loss_fake = self.d_loss(y_fake, disc_fake)
 
-                #combine to obtain loss
-                disc_loss = disc_loss_fake + disc_loss_real 
-            disc_grads = disc_tape.gradient(disc_loss, self.critic.trainable_variables)
+            # update critic based on real loss
+            disc_grads = disc_tape.gradient(disc_loss_real, self.critic.trainable_variables)
             self.d_opt.apply_gradients(zip(disc_grads, self.critic.trainable_variables))
+            # update critic based on fake loss
+            disc_grads = disc_tape.gradient(disc_loss_fake, self.critic.trainable_variables)
+            self.d_opt.apply_gradients(zip(disc_grads, self.critic.trainable_variables))
+            
 
         with tf.GradientTape() as gen_tape:
             fake_images = self.generator(tf.cast(tf.random.normal([tf.shape(labels)[0], self.latent_dim]), dtype=tf.float32), training=True)
