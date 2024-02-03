@@ -103,34 +103,30 @@ class GAN_Model(tf.keras.Model):
     def train_step(self, batch):
         (real_images, labels) = batch
         # meassure gradients of generator and critic
+        c1_tmp, c2_tmp = list(), list()
         for _ in range(ITERATIONS_CRITIC):
-            with tf.GradientTape() as disc_tape:
-                
+            with tf.GradientTape() as disc_tape_real, tf.GradientTape() as disc_tape_fake:
+                fake_images = self.generator(tf.cast(tf.random.normal([tf.shape(labels)[0], self.latent_dim]), dtype=tf.float32), training=True)
                 disc_real = self.critic(real_images, training=True)
-
+                disc_fake = self.critic(fake_images, training=True)
                 # Calculate critic loss for real images and fake images
                 y_real = -1*tf.ones_like(disc_real)
-                
+                y_fake = tf.ones_like(disc_fake)
+
                 # apply noise to real labels
                 y_real += 0.05*tf.random.normal(tf.shape(y_real))
+                y_fake += 0.05*tf.random.normal(tf.shape(y_fake))
 
                 disc_loss_real = self.d_loss(y_real, disc_real)
-        
-            # update critic based on real loss
-            disc_grads = disc_tape.gradient(disc_loss_real, self.critic.trainable_variables)
-            self.d_opt.apply_gradients(zip(disc_grads, self.critic.trainable_variables))
-
-
-            with tf.GradientTape() as disc_tape:
-                fake_images = self.generator(tf.cast(tf.random.normal([tf.shape(labels)[0], self.latent_dim]), dtype=tf.float32), training=True)
-                disc_fake = self.critic(fake_images, training=True)
-                y_fake = tf.ones_like(disc_fake)
-                y_fake += 0.05*tf.random.normal(tf.shape(y_fake))
                 disc_loss_fake = self.d_loss(y_fake, disc_fake)
-            # update critic based on fake loss
-            disc_grads = disc_tape.gradient(disc_loss_fake, self.critic.trainable_variables)
-            self.d_opt.apply_gradients(zip(disc_grads, self.critic.trainable_variables))
-            
+            # update critic based on real loss
+            disc_grads_real = disc_tape_real.gradient(disc_loss_real, self.critic.trainable_variables)
+            self.d_opt.apply_gradients(zip(disc_grads_real, self.critic.trainable_variables))
+
+            disc_grads_fake = disc_tape_fake.gradient(disc_loss_fake, self.critic.trainable_variables)
+            self.d_opt.apply_gradients(zip(disc_grads_fake, self.critic.trainable_variables))
+            c1_tmp.append(disc_loss_real)
+            c2_tmp.append(disc_loss_fake)
         with tf.GradientTape() as gen_tape:
             fake_images = self.generator(tf.cast(tf.random.normal([tf.shape(labels)[0], self.latent_dim]), dtype=tf.float32), training=True)
             disc_fake = self.critic(fake_images, training=True)
@@ -144,7 +140,7 @@ class GAN_Model(tf.keras.Model):
         self.g_opt.apply_gradients(zip(gen_grads, self.generator.trainable_variables))
         
 
-        return {"d_loss_real":disc_loss_real,"d_loss_fake":disc_loss_fake, "g_loss":gen_loss}
+        return {"d_loss_real":tf.reduce_mean(c1_tmp),"d_loss_fake":tf.reduce_mean(c2_tmp), "g_loss":gen_loss}
 
     
 
