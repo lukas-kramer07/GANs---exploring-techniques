@@ -171,9 +171,9 @@ class ModelMonitor(tf.keras.callbacks.Callback):
             self.model.generator.save(f'Training/training_checkpoints/{self.gan_dir}/model.keras')
 
 ## DATA Manipulation
-def normalize(image,label):
-    #image,label = element['image'], element['label']
-    return tf.cast((tf.image.resize(image, (64, 64))-127.5) / 127.5, tf.dtypes.float32), label
+def normalize(element):
+    image,label = element['image'], element['label']
+    return tf.cast((tf.image.resize(image, (28, 28))-127.5) / 127.5, tf.dtypes.float32), label
 def visualize_data(test_ds, ds_info=None):
     num_images_to_display = 15
     plt.figure(figsize=(num_images_to_display, num_images_to_display))
