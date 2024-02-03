@@ -106,29 +106,31 @@ class GAN_Model(tf.keras.Model):
         for _ in range(ITERATIONS_CRITIC):
             with tf.GradientTape() as disc_tape:
                 
-                fake_images = self.generator(tf.cast(tf.random.normal([tf.shape(labels)[0], self.latent_dim]), dtype=tf.float32), training=True)
                 disc_real = self.critic(real_images, training=True)
-                disc_fake = self.critic(fake_images, training=True)
 
                 # Calculate critic loss for real images and fake images
                 y_real = -1*tf.ones_like(disc_real)
-                y_fake = tf.ones_like(disc_fake)
-
+                
                 # apply noise to real labels
                 y_real += 0.05*tf.random.normal(tf.shape(y_real))
-                y_fake += 0.05*tf.random.normal(tf.shape(y_fake))
 
                 disc_loss_real = self.d_loss(y_real, disc_real)
-                disc_loss_fake = self.d_loss(y_fake, disc_fake)
-
+        
             # update critic based on real loss
             disc_grads = disc_tape.gradient(disc_loss_real, self.critic.trainable_variables)
             self.d_opt.apply_gradients(zip(disc_grads, self.critic.trainable_variables))
+
+
+            with tf.GradientTape() as disc_tape:
+                fake_images = self.generator(tf.cast(tf.random.normal([tf.shape(labels)[0], self.latent_dim]), dtype=tf.float32), training=True)
+                disc_fake = self.critic(fake_images, training=True)
+                y_fake = tf.ones_like(disc_fake)
+                y_fake += 0.05*tf.random.normal(tf.shape(y_fake))
+                disc_loss_fake = self.d_loss(y_fake, disc_fake)
             # update critic based on fake loss
             disc_grads = disc_tape.gradient(disc_loss_fake, self.critic.trainable_variables)
             self.d_opt.apply_gradients(zip(disc_grads, self.critic.trainable_variables))
             
-
         with tf.GradientTape() as gen_tape:
             fake_images = self.generator(tf.cast(tf.random.normal([tf.shape(labels)[0], self.latent_dim]), dtype=tf.float32), training=True)
             disc_fake = self.critic(fake_images, training=True)
