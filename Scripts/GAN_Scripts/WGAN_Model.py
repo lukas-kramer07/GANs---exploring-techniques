@@ -14,7 +14,7 @@ from keras import backend as K
 
 gan_dir = "nums_28"
 LATENT_DIM = 100
-EPOCHS = 1000
+EPOCHS = 9000
 num_examples_to_generate = 20
 BATCH_SIZE = 1500
 ITERATIONS_CRITIC = 5
@@ -59,13 +59,13 @@ def make_generator_model(latent_dim=LATENT_DIM):
     x= layers.BatchNormalization()(x)
     x= layers.LeakyReLU()(x)
 
-    output= layers.Conv2DTranspose(1, (5, 5), strides=(1, 1), padding='same', use_bias=False, activation='tanh')(x)
+    output= layers.Conv2DTranspose(3, (5, 5), strides=(1, 1), padding='same', use_bias=False, activation='tanh')(x)
 
     model = Model(input_latent, output)
     return model
 
 
-def make_critic_model(in_shape = (28,28,1)):
+def make_critic_model(in_shape = (28,28,3)):
     const = ClipConstraint(0.01)
 
     input_image = layers.Input(shape=in_shape)   
@@ -157,7 +157,7 @@ class ModelMonitor(tf.keras.callbacks.Callback):
 
             for i in range(predictions.shape[0]):
                 plt.subplot(5, 4, i + 1)
-                plt.imshow(tf.cast(predictions[i, :, :, 0] * 127.5 +127.5, tf.dtypes.int16))
+                plt.imshow(tf.cast(predictions[i, :, :, :] * 127.5 +127.5, tf.dtypes.int16))
                 plt.axis("off")
             os.makedirs(
                 f"Training/plots/{self.gan_dir}", exist_ok=True
@@ -172,8 +172,8 @@ class ModelMonitor(tf.keras.callbacks.Callback):
             self.model.generator.save(f'Training/training_checkpoints/{self.gan_dir}/model.keras')
 
 ## DATA Manipulation
-def normalize(element):
-    image,label = element['image'], element['label']
+def normalize(image, label):
+    #image,label = element['image'], element['label']
     return tf.cast((tf.image.resize(image, (28, 28))-127.5) / 127.5, tf.dtypes.float32), label
 def visualize_data(test_ds, ds_info=None):
     num_images_to_display = 15
@@ -202,9 +202,24 @@ def visualize_data(test_ds, ds_info=None):
 ## MAIN function
 def main():
     
-    train_dataset,info = tfds.load('mnist', split='train', with_info=True)
-    print(f'There are {info.splits["train"].num_examples} examples')
-    BUFFER_SIZE = info.splits["train"].num_examples
+    train_dataset = tf.keras.utils.image_dataset_from_directory(
+    '/home/lukas/Code/Cars/cars_train/',
+    labels='inferred',
+    label_mode='int',
+    class_names=None,
+    color_mode='rgb',
+    batch_size=None,
+    image_size=(224, 224),
+    shuffle=True,
+    seed=None,
+    validation_split=None,
+    subset=None,
+    interpolation='bilinear',
+    follow_links=False,
+    crop_to_aspect_ratio=True,
+)
+    #print(f'There are {info.splits["train"].num_examples} examples')
+    BUFFER_SIZE = 10000 #info.splits["train"].num_examples
     AUTOTUNE = tf.data.experimental.AUTOTUNE
 
     train_dataset = (
