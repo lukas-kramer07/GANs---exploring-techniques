@@ -12,11 +12,11 @@ from keras.constraints import Constraint
 import numpy as np
 from keras import backend as K
 
-gan_dir = "nums_28"
+gan_dir = "cars_56"
 LATENT_DIM = 100
-EPOCHS = 9000
+EPOCHS = 2500
 num_examples_to_generate = 20
-BATCH_SIZE = 1500
+BATCH_SIZE = 512
 ITERATIONS_CRITIC = 5
 
 ## Wasserstein specific functions
@@ -43,10 +43,10 @@ class ClipConstraint(Constraint):
 def make_generator_model(latent_dim=LATENT_DIM):
 
     input_latent = layers.Input(shape=latent_dim)
-    lat= layers.Dense(7*7*latent_dim, use_bias=False)(input_latent)
+    lat= layers.Dense(14*14*latent_dim, use_bias=False)(input_latent)
     lat= layers.BatchNormalization()(lat)
     lat= layers.LeakyReLU()(lat)
-    lat= layers.Reshape((7, 7, latent_dim))(lat)
+    lat= layers.Reshape((14, 14, latent_dim))(lat)
     #assert merge.shape == (None, 7, 7, 129)  # Note: None is the batch size
 
     x= layers.Conv2DTranspose(128, (5, 5), strides=(2, 2), padding='same', use_bias=False)(lat)
@@ -65,7 +65,7 @@ def make_generator_model(latent_dim=LATENT_DIM):
     return model
 
 
-def make_critic_model(in_shape = (28,28,3)):
+def make_critic_model(in_shape = (56,56,3)):
     const = ClipConstraint(0.01)
 
     input_image = layers.Input(shape=in_shape)   
@@ -174,7 +174,7 @@ class ModelMonitor(tf.keras.callbacks.Callback):
 ## DATA Manipulation
 def normalize(image, label):
     #image,label = element['image'], element['label']
-    return tf.cast((tf.image.resize(image, (28, 28))-127.5) / 127.5, tf.dtypes.float32), label
+    return tf.cast((tf.image.resize(image, (56, 56))-127.5) / 127.5, tf.dtypes.float32), label
 def visualize_data(test_ds, ds_info=None):
     num_images_to_display = 15
     plt.figure(figsize=(num_images_to_display, num_images_to_display))
