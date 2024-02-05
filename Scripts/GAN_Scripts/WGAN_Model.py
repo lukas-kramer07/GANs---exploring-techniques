@@ -14,7 +14,7 @@ from keras import backend as K
 
 gan_dir = "cars_56"
 LATENT_DIM = 100
-EPOCHS = 2500
+EPOCHS = 3000
 num_examples_to_generate = 20
 BATCH_SIZE = 512
 ITERATIONS_CRITIC = 5
