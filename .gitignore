@@ -8,8 +8,8 @@ __pycache__/
 
 model_checkpoints/
 
-Test_Scripts/
-Scripts/Test_Scripts
+Test_Scripts/*
+/Scripts/Test_Scripts/*
 # Distribution / packaging
 .Python
 build/
